@@ -1,4 +1,4 @@
-// frontend/App.js
+// frontend/App.js - PROFESSIONAL DESIGN
 import React, { useState } from 'react';
 import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,23 +16,25 @@ function AppContent() {
   
   const { user, loading } = useAuth();
 
-  // Handle tab changes
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    // Auto-close sidebar on mobile after selection
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   };
 
-  // Theme colors
+  // Professional theme colors
   const theme = {
-    bg: darkMode ? '#111827' : '#F9FAFB',
-    card: darkMode ? '#1F2937' : '#FFFFFF',
-    text: darkMode ? '#FFFFFF' : '#111827',
-    textMuted: darkMode ? '#9CA3AF' : '#6B7280',
-    border: darkMode ? '#374151' : '#E5E7EB',
+    bg: darkMode ? '#0F172A' : '#F8FAFC',
+    card: darkMode ? '#1E293B' : '#FFFFFF',
+    text: darkMode ? '#F1F5F9' : '#0F172A',
+    textMuted: darkMode ? '#94A3B8' : '#64748B',
+    border: darkMode ? '#334155' : '#E2E8F0',
     primary: '#3B82F6',
-    sidebar: darkMode ? '#1F2937' : '#FFFFFF',
+    sidebar: darkMode ? '#1E293B' : '#FFFFFF',
   };
 
-  // Show loading spinner while checking auth
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.bg }]}>
@@ -41,15 +43,12 @@ function AppContent() {
     );
   }
 
-  // Show login screen if not authenticated
   if (!user) {
     return <LoginScreen theme={theme} />;
   }
 
-  // Show main app if authenticated
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -61,8 +60,10 @@ function AppContent() {
         user={user}
       />
 
-      {/* Main Content */}
-      <View style={[styles.content, sidebarOpen && styles.contentShifted]}>
+      <View style={[
+        styles.content, 
+        sidebarOpen && styles.contentShifted
+      ]}>
         {activeTab === 'items' && <ItemScreen theme={theme} darkMode={darkMode} />}
         {activeTab === 'recipe' && <RecipeScreen theme={theme} darkMode={darkMode} />}
         {activeTab === 'rating' && <RatingScreen theme={theme} darkMode={darkMode} />}
@@ -75,7 +76,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+        <StatusBar 
+          barStyle="light-content" 
+          backgroundColor="#1E293B" 
+        />
         <AppContent />
       </AuthProvider>
     </SafeAreaProvider>
@@ -88,7 +92,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    transition: 'margin-left 0.3s ease',
   },
   contentShifted: {
     marginLeft: 280,

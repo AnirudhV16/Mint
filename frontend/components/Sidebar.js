@@ -1,7 +1,8 @@
-// frontend/components/Sidebar.js - FINAL FIXED VERSION
+// frontend/components/Sidebar.js - DEBUG LOGOUT
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, Platform } from 'react-native';
+import { signOut } from 'firebase/auth';
+import { auth } from '../services/firebase';
 
 export default function Sidebar({ 
   isOpen, 
@@ -14,7 +15,6 @@ export default function Sidebar({
   user 
 }) {
   const slideAnim = React.useRef(new Animated.Value(isOpen ? 0 : -280)).current;
-  const { logout } = useAuth();
 
   React.useEffect(() => {
     Animated.timing(slideAnim, {
@@ -25,7 +25,10 @@ export default function Sidebar({
   }, [isOpen]);
 
   const handleLogout = () => {
-    console.log('🚪 Logout button pressed');
+    console.log('=== LOGOUT CLICKED ===');
+    console.log('Current user:', user?.email);
+    console.log('Auth object:', auth);
+    console.log('Auth currentUser:', auth.currentUser?.email);
     
     Alert.alert(
       'Logout',
@@ -39,30 +42,27 @@ export default function Sidebar({
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            console.log('✓ User confirmed logout');
-            console.log('Calling logout function...');
+          onPress: async () => {
+            console.log('=== STARTING LOGOUT ===');
             
-            logout().then((result) => {
-              console.log('Logout result:', result);
+            try {
+              console.log('Calling signOut...');
+              await signOut(auth);
               
-              if (result.success) {
-                console.log('✅ Logout successful, reloading page...');
-                
-                // Force page reload
-                if (typeof window !== 'undefined') {
-                  setTimeout(() => {
-                    window.location.href = window.location.href;
-                  }, 100);
-                }
-              } else {
-                console.error('❌ Logout failed:', result.error);
-                Alert.alert('Logout Failed', result.error || 'Could not logout');
+              console.log('✅ signOut completed');
+              
+              // Force reload
+              console.log('Forcing reload...');
+              if (Platform.OS === 'web') {
+                window.location.href = window.location.origin;
               }
-            }).catch((error) => {
-              console.error('❌ Logout promise error:', error);
-              Alert.alert('Error', 'Logout failed: ' + error.message);
-            });
+            } catch (error) {
+              console.error('=== LOGOUT ERROR ===');
+              console.error('Error:', error);
+              console.error('Error code:', error.code);
+              console.error('Error message:', error.message);
+              Alert.alert('Logout Failed', error.message);
+            }
           }
         }
       ],
@@ -70,7 +70,6 @@ export default function Sidebar({
     );
   };
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
@@ -80,36 +79,25 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Toggle Button */}
       <TouchableOpacity
         style={[styles.toggleButton, { backgroundColor: theme.card }]}
         onPress={onToggle}
       >
         <View style={styles.toggleIcon}>
-          {isOpen ? (
-            <>
-              <View style={[styles.bar, styles.barActive]} />
-              <View style={[styles.bar, styles.barActive]} />
-              <View style={[styles.bar, styles.barActive]} />
-            </>
-          ) : (
-            <>
-              <View style={styles.dot} />
-              <View style={styles.dot} />
-              <View style={styles.dot} />
-            </>
-          )}
+          <View style={styles.hamburger}>
+            <View style={[styles.line, { backgroundColor: theme.text }]} />
+            <View style={[styles.line, { backgroundColor: theme.text }]} />
+            <View style={[styles.line, { backgroundColor: theme.text }]} />
+          </View>
         </View>
       </TouchableOpacity>
 
-      {/* Sidebar */}
       <Animated.View
         style={[
           styles.sidebar,
           { backgroundColor: theme.sidebar, transform: [{ translateX: slideAnim }] }
         ]}
       >
-        {/* Profile Section */}
         <View style={styles.profile}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getUserInitials()}</Text>
@@ -117,34 +105,25 @@ export default function Sidebar({
           <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
             {user?.email || 'User'}
           </Text>
-          <Text style={[styles.userStatus, { color: theme.textMuted }]}>
-            ✓ Logged in
-          </Text>
         </View>
 
-        {/* Theme Toggle */}
-        <TouchableOpacity
-          style={[styles.themeButton, { backgroundColor: darkMode ? '#374151' : '#F3F4F6' }]}
-          onPress={onThemeToggle}
-        >
-          <Text style={[styles.themeText, { color: theme.text }]}>Theme</Text>
-          <Text style={styles.themeIcon}>{darkMode ? '🌙' : '☀️'}</Text>
-        </TouchableOpacity>
-
-        {/* Navigation Tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'items' && styles.tabActive,
-              { backgroundColor: activeTab === 'items' ? theme.primary : (darkMode ? '#374151' : '#F3F4F6') }
+              { 
+                backgroundColor: activeTab === 'items' ? '#3B82F6' : 'transparent',
+              }
             ]}
-            onPress={() => onTabChange('items')}
+            onPress={() => {
+              console.log('Items tab clicked');
+              onTabChange('items');
+            }}
           >
             <Text style={styles.tabEmoji}>🧺</Text>
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'items' ? '#FFFFFF' : theme.text }
+              { color: activeTab === 'items' ? '#FFFFFF' : theme.textMuted }
             ]}>
               Items
             </Text>
@@ -153,15 +132,19 @@ export default function Sidebar({
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'recipe' && styles.tabActive,
-              { backgroundColor: activeTab === 'recipe' ? theme.primary : (darkMode ? '#374151' : '#F3F4F6') }
+              { 
+                backgroundColor: activeTab === 'recipe' ? '#3B82F6' : 'transparent',
+              }
             ]}
-            onPress={() => onTabChange('recipe')}
+            onPress={() => {
+              console.log('Recipe tab clicked');
+              onTabChange('recipe');
+            }}
           >
             <Text style={styles.tabEmoji}>🍳</Text>
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'recipe' ? '#FFFFFF' : theme.text }
+              { color: activeTab === 'recipe' ? '#FFFFFF' : theme.textMuted }
             ]}>
               Recipe
             </Text>
@@ -170,32 +153,46 @@ export default function Sidebar({
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'rating' && styles.tabActive,
-              { backgroundColor: activeTab === 'rating' ? theme.primary : (darkMode ? '#374151' : '#F3F4F6') }
+              { 
+                backgroundColor: activeTab === 'rating' ? '#3B82F6' : 'transparent',
+              }
             ]}
-            onPress={() => onTabChange('rating')}
+            onPress={() => {
+              console.log('Rating tab clicked');
+              onTabChange('rating');
+            }}
           >
             <Text style={styles.tabEmoji}>⭐</Text>
             <Text style={[
               styles.tabText,
-              { color: activeTab === 'rating' ? '#FFFFFF' : theme.text }
+              { color: activeTab === 'rating' ? '#FFFFFF' : theme.textMuted }
             ]}>
               Rating
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
         <View style={styles.bottomSection}>
           <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: darkMode ? '#374151' : '#FEE2E2' }]}
+            style={styles.themeButton}
+            onPress={() => {
+              console.log('Theme toggle clicked');
+              onThemeToggle();
+            }}
+          >
+            <Text style={styles.themeIcon}>{darkMode ? '🌙' : '☀️'}</Text>
+            <Text style={[styles.themeText, { color: theme.textMuted }]}>
+              {darkMode ? 'Dark' : 'Light'} Mode
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.logoutButton}
             onPress={handleLogout}
             activeOpacity={0.7}
           >
             <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={[styles.logoutText, { color: '#DC2626' }]}>
-              Logout
-            </Text>
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -206,39 +203,34 @@ export default function Sidebar({
 const styles = StyleSheet.create({
   toggleButton: {
     position: 'absolute',
-    left: 0,
-    top: '50%',
-    width: 18,
-    height: 80,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    left: 16,
+    top: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
-    elevation: 5,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   toggleIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  hamburger: {
+    width: 20,
     gap: 4,
   },
-  bar: {
-    width: 4,
-    height: 16,
-    backgroundColor: '#3B82F6',
-    borderRadius: 2,
-  },
-  barActive: {
-    height: 16,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    backgroundColor: '#3B82F6',
-    borderRadius: 2,
+  line: {
+    width: '100%',
+    height: 2,
+    borderRadius: 1,
   },
   sidebar: {
     position: 'absolute',
@@ -247,55 +239,42 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 280,
     padding: 24,
+    paddingTop: 80,
     zIndex: 50,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
   },
   profile: {
     alignItems: 'center',
     marginBottom: 32,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   avatarText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   userName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     width: '100%',
     textAlign: 'center',
-    marginBottom: 4,
-  },
-  userStatus: {
-    fontSize: 13,
-  },
-  themeButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  themeText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  themeIcon: {
-    fontSize: 20,
   },
   tabs: {
     gap: 8,
@@ -304,37 +283,51 @@ const styles = StyleSheet.create({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     borderRadius: 8,
     gap: 12,
-  },
-  tabActive: {
-    // Active tab styling applied via backgroundColor in component
   },
   tabEmoji: {
     fontSize: 20,
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
   },
   bottomSection: {
-    marginTop: 'auto',
+    gap: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  themeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
+  },
+  themeIcon: {
+    fontSize: 20,
+  },
+  themeText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
     gap: 12,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    backgroundColor: '#FEE2E2',
   },
   logoutIcon: {
     fontSize: 20,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
+    color: '#DC2626',
   },
 });

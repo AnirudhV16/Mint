@@ -1,4 +1,4 @@
-// frontend/components/ItemScreen.js - FIXED VERSION
+// frontend/components/ItemScreen.js - FIXED PERMISSION ISSUE
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
@@ -15,10 +15,16 @@ export default function ItemScreen({ theme, darkMode }) {
   
   const { user } = useAuth();
 
-  // Load products from Firestore (only user's products)
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user logged in');
+      setLoading(false);
+      return;
+    }
 
+    console.log('📦 Loading products for user:', user.uid);
+
+    // IMPORTANT: Must use where clause to match security rules
     const q = query(
       collection(db, 'products'),
       where('userId', '==', user.uid)
@@ -31,12 +37,16 @@ export default function ItemScreen({ theme, darkMode }) {
           id: doc.id,
           ...doc.data()
         }));
+        
+        productList.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+        
+        console.log('✅ Loaded', productList.length, 'products');
         setProducts(productList);
         setLoading(false);
       },
       (error) => {
-        console.error('Error loading products:', error);
-        Alert.alert('Error', 'Failed to load products. Check Firestore permissions.');
+        console.error('❌ Load error:', error.code, error.message);
+        Alert.alert('Error', 'Failed to load products');
         setLoading(false);
       }
     );
@@ -44,86 +54,125 @@ export default function ItemScreen({ theme, darkMode }) {
     return () => unsubscribe();
   }, [user]);
 
-  // Save product (add or update)
   const handleSaveProduct = async (productData) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     try {
       if (editingProduct) {
-        // Update existing product
-        console.log('💾 Updating product:', editingProduct.id);
+        console.log('💾 Updating:', editingProduct.id);
+        
         await updateDoc(doc(db, 'products', editingProduct.id), {
           ...productData,
-          userId: user.uid, // Ensure userId is always set
+          userId: user.uid, // Ensure userId is set
+          updatedAt: new Date().toISOString(),
         });
-        Alert.alert('Success', 'Product updated successfully!');
+        
+        console.log('✅ Updated successfully');
+        Alert.alert('Success', 'Product updated!');
       } else {
-        // Add new product
         console.log('➕ Adding new product');
+        
         await addDoc(collection(db, 'products'), {
           ...productData,
-          userId: user.uid, // Add userId for security rules
+          userId: user.uid, // Must include userId
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         });
-        Alert.alert('Success', 'Product added successfully!');
+        
+        console.log('✅ Added successfully');
+        Alert.alert('Success', 'Product added!');
       }
+      
       setEditingProduct(null);
     } catch (error) {
-      console.error('❌ Error saving product:', error);
-      Alert.alert('Error', 'Failed to save product: ' + error.message);
+      console.error('❌ Save error:', error.code, error.message);
+      Alert.alert('Error', `Failed to save: ${error.message}`);
       throw error;
     }
   };
 
-  // Delete product - FIXED VERSION
   const handleDeleteProduct = async (productId) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     try {
-      console.log('🗑️ Deleting product:', productId);
+      console.log('🗑️ Deleting:', productId);
       
-      // Delete from Firestore
       await deleteDoc(doc(db, 'products', productId));
       
-      console.log('✅ Product deleted successfully');
-      Alert.alert('Success', 'Product deleted successfully!');
+      console.log('✅ Deleted successfully');
+      // Don't show alert here - card already shows confirmation
     } catch (error) {
-      console.error('❌ Error deleting product:', error);
-      Alert.alert('Error', 'Failed to delete product: ' + error.message);
+      console.error('❌ Delete error:', error.code, error.message);
+      Alert.alert('Error', `Failed to delete: ${error.message}`);
     }
   };
 
-  // Open modal for adding new product
   const handleAddProduct = () => {
     setEditingProduct(null);
     setModalVisible(true);
   };
 
-  // Open modal for editing product
   const handleEditProduct = (product) => {
-    console.log('✏️ Editing product:', product.name);
     setEditingProduct(product);
     setModalVisible(true);
   };
 
+  const expiringSoon = products.filter(p => {
+    const daysLeft = Math.ceil((new Date(p.expDate) - new Date()) / (1000 * 60 * 60 * 24));
+    return daysLeft >= 0 && daysLeft <= 7;
+  }).length;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>AI Food Tracker</Text>
-        
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddProduct}
-        >
-          <Text style={styles.addButtonText}>+ Add Product</Text>
-        </TouchableOpacity>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.title, { color: theme.text }]}>Food Tracker</Text>
+            <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+              {products.length} {products.length === 1 ? 'item' : 'items'}
+              {expiringSoon > 0 && ` • ${expiringSoon} expiring soon`}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddProduct}
+          >
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
           <View style={styles.centerContainer}>
             <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-              Loading products...
+              Loading...
             </Text>
           </View>
         ) : products.length === 0 ? (
-          <View style={styles.centerContainer}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              No products yet. Add your first product!
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🧺</Text>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              No products yet
             </Text>
+            <Text style={[styles.emptyDesc, { color: theme.textMuted }]}>
+              Track your food items to monitor expiry dates
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={handleAddProduct}
+            >
+              <Text style={styles.emptyButtonText}>Add Your First Product</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.grid}>
@@ -162,24 +211,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 24,
+    padding: 20,
+    paddingTop: 80,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 24,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
   },
   addButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 24,
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   grid: {
@@ -189,14 +246,41 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: 60,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 15,
   },
-  emptyText: {
-    fontSize: 16,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  emptyDesc: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

@@ -1,111 +1,93 @@
-// frontend/components/ItemCard.js - FIXED VERSION
+// frontend/components/ItemCard.js - SIMPLE & PROFESSIONAL
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
-// Helper functions
-const getStarColor = (rating) => {
-  const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
-  return colors[rating - 1] || '#6b7280';
-};
-
 const calculateDaysUntilExpiry = (expDate) => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const expiry = new Date(expDate);
+  expiry.setHours(0, 0, 0, 0);
   const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
   return diff;
 };
 
+const getExpiryStatus = (daysLeft) => {
+  if (daysLeft < 0) return { text: 'Expired', color: '#DC2626', bg: '#FEE2E2' };
+  if (daysLeft === 0) return { text: 'Expires today', color: '#EA580C', bg: '#FFEDD5' };
+  if (daysLeft <= 3) return { text: `${daysLeft} days left`, color: '#EA580C', bg: '#FFEDD5' };
+  if (daysLeft <= 7) return { text: `${daysLeft} days left`, color: '#CA8A04', bg: '#FEF3C7' };
+  return { text: `${daysLeft} days left`, color: '#059669', bg: '#D1FAE5' };
+};
+
 export default function ItemCard({ product, theme, onEdit, onDelete }) {
   const daysLeft = calculateDaysUntilExpiry(product.expDate);
-  const rating = product.rating || 3;
-
-  const handleEdit = () => {
-    console.log('✏️ Edit button clicked for:', product.name);
-    if (onEdit) {
-      onEdit();
-    } else {
-      console.error('❌ onEdit function not provided');
-    }
-  };
+  const expiryStatus = getExpiryStatus(daysLeft);
 
   const handleDelete = () => {
-    console.log('🗑️ Delete button clicked for:', product.name);
-    if (onDelete) {
-      Alert.alert(
-        'Delete Product',
-        `Are you sure you want to delete "${product.name}"?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              console.log('✓ User confirmed delete');
+    console.log('🗑️ Delete initiated for:', product.id);
+    
+    Alert.alert(
+      'Delete Product',
+      `Delete "${product.name}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => console.log('Delete cancelled')
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            console.log('✓ Deleting product:', product.id);
+            if (onDelete) {
               onDelete();
+            } else {
+              console.error('❌ onDelete not provided');
             }
           }
-        ]
-      );
-    } else {
-      console.error('❌ onDelete function not provided');
-    }
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.header}>
+    <View style={[styles.card, { backgroundColor: theme.card }]}>
+      {/* Product Info */}
+      <View style={styles.content}>
         <Text style={[styles.productName, { color: theme.text }]} numberOfLines={2}>
           {product.name}
         </Text>
-        <View style={styles.rating}>
-          {[...Array(5)].map((_, i) => (
-            <Text
-              key={i}
-              style={[styles.star, { color: i < rating ? getStarColor(rating) : '#d1d5db' }]}
-            >
-              ⭐
-            </Text>
-          ))}
+        
+        <View style={[styles.expiryBadge, { backgroundColor: expiryStatus.bg }]}>
+          <Text style={[styles.expiryText, { color: expiryStatus.color }]}>
+            {expiryStatus.text}
+          </Text>
         </View>
       </View>
 
-      <Text
-        style={[
-          styles.expiryText,
-          { color: daysLeft < 5 ? '#ef4444' : daysLeft < 10 ? '#f97316' : theme.textMuted }
-        ]}
-      >
-        {daysLeft > 0 ? `${daysLeft} days until expiry` : daysLeft === 0 ? 'Expires today!' : 'Expired'}
-      </Text>
-
-      {/* Manufacturing and Expiry Dates */}
-      <View style={styles.dateInfo}>
-        <Text style={[styles.dateLabel, { color: theme.textMuted }]}>
-          Mfg: {new Date(product.mfgDate).toLocaleDateString()}
-        </Text>
-        <Text style={[styles.dateLabel, { color: theme.textMuted }]}>
-          Exp: {new Date(product.expDate).toLocaleDateString()}
-        </Text>
-      </View>
-
-      {/* Buttons */}
-      <View style={styles.buttons}>
-        <TouchableOpacity 
-          style={styles.editButton} 
-          onPress={handleEdit}
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            console.log('✏️ Edit clicked');
+            if (onEdit) onEdit();
+          }}
           activeOpacity={0.7}
         >
-          <Text style={styles.buttonText}>Edit</Text>
+          <Text style={[styles.actionText, { color: '#3B82F6' }]}>Edit</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.deleteButton} 
+        
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        
+        <TouchableOpacity
+          style={styles.actionButton}
           onPress={handleDelete}
           activeOpacity={0.7}
         >
-          <Text style={styles.buttonText}>Delete</Text>
+          <Text style={[styles.actionText, { color: '#DC2626' }]}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -115,69 +97,52 @@ export default function ItemCard({ product, theme, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    maxWidth: 350,
-    padding: 16,
+    maxWidth: 320,
     borderRadius: 12,
-    borderWidth: 1,
+    overflow: 'hidden',
     marginBottom: 16,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+  content: {
+    padding: 20,
   },
   productName: {
-    flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    marginRight: 8,
+    marginBottom: 12,
+    lineHeight: 24,
   },
-  rating: {
-    flexDirection: 'row',
-  },
-  star: {
-    fontSize: 16,
+  expiryBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   expiryText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  dateInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  dateLabel: {
     fontSize: 13,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    flex: 1,
-    backgroundColor: '#3B82F6',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteButton: {
-    flex: 1,
-    backgroundColor: '#ef4444',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  divider: {
+    width: 1,
   },
 });

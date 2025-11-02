@@ -1,4 +1,4 @@
-// frontend/components/RatingScreen.js - FIXED VERSION
+// frontend/components/RatingScreen.js - FILTERED & PROFESSIONAL
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -6,8 +6,13 @@ import { db } from '../services/firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 const getStarColor = (rating) => {
-  const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
-  return colors[rating - 1] || '#6b7280';
+  const colors = ['#DC2626', '#EA580C', '#CA8A04', '#84CC16', '#22C55E'];
+  return colors[rating - 1] || '#6B7280';
+};
+
+const getRatingLabel = (rating) => {
+  const labels = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+  return labels[rating - 1] || 'Not Rated';
 };
 
 export default function RatingScreen({ theme, darkMode }) {
@@ -17,14 +22,12 @@ export default function RatingScreen({ theme, darkMode }) {
 
   useEffect(() => {
     if (!user) {
-      console.log('No user logged in');
       setLoading(false);
       return;
     }
 
-    console.log('Loading products for ratings, user:', user.uid);
+    console.log('📊 Loading rated products for user:', user.uid);
 
-    // Query only user's products
     const q = query(
       collection(db, 'products'),
       where('userId', '==', user.uid)
@@ -33,13 +36,23 @@ export default function RatingScreen({ theme, darkMode }) {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const productList = snapshot.docs.map(doc => ({
+        const allProducts = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         
-        console.log('Loaded', productList.length, 'products for rating');
-        setProducts(productList);
+        // Filter: Only products with ingredients AND rating
+        const ratedProducts = allProducts.filter(product => 
+          product.ingredients && 
+          product.ingredients.length > 0 &&
+          product.rating
+        );
+        
+        // Sort by rating (highest first)
+        ratedProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        
+        console.log(`✅ Found ${ratedProducts.length} rated products out of ${allProducts.length} total`);
+        setProducts(ratedProducts);
         setLoading(false);
       },
       (error) => {
@@ -59,10 +72,10 @@ export default function RatingScreen({ theme, darkMode }) {
             key={i}
             style={[
               styles.star,
-              { color: i < rating ? getStarColor(rating) : '#d1d5db' }
+              { color: i < rating ? getStarColor(rating) : '#D1D5DB' }
             ]}
           >
-            ⭐
+            {i < rating ? '★' : '☆'}
           </Text>
         ))}
       </View>
@@ -77,82 +90,96 @@ export default function RatingScreen({ theme, darkMode }) {
     return (
       <View
         key={product.id}
-        style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
+        style={[styles.card, { backgroundColor: theme.card }]}
       >
+        {/* Header */}
         <View style={styles.cardHeader}>
-          <Text style={[styles.productName, { color: theme.text }]} numberOfLines={2}>
-            {product.name}
-          </Text>
-          {renderStars(rating)}
-        </View>
-
-        {/* Good Contents */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.goodIcon}>✓</Text>
-            <Text style={[styles.sectionTitle, { color: '#10B981' }]}>
-              Good Contents
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.productName, { color: theme.text }]} numberOfLines={2}>
+              {product.name}
+            </Text>
+            <Text style={[styles.ingredientCount, { color: theme.textMuted }]}>
+              {product.ingredients.length} ingredients analyzed
             </Text>
           </View>
-          {goodContents.length > 0 ? (
-            goodContents.map((content, index) => (
-              <View key={index} style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={[styles.listText, { color: theme.textMuted }]}>
-                  {content}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              No specific good contents identified
-            </Text>
-          )}
-        </View>
-
-        {/* Bad Contents */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.badIcon}>✗</Text>
-            <Text style={[styles.sectionTitle, { color: '#ef4444' }]}>
-              Bad Contents
+          <View style={styles.ratingBadge}>
+            {renderStars(rating)}
+            <Text style={[styles.ratingLabel, { color: getStarColor(rating) }]}>
+              {getRatingLabel(rating)}
             </Text>
           </View>
-          {badContents.length > 0 ? (
-            badContents.map((content, index) => (
-              <View key={index} style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={[styles.listText, { color: theme.textMuted }]}>
-                  {content}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              No concerning ingredients identified
-            </Text>
-          )}
         </View>
 
         {/* Health Summary */}
         {product.healthSummary && (
-          <View style={[styles.summaryBox, { backgroundColor: darkMode ? '#374151' : '#F3F4F6' }]}>
+          <View style={[styles.summaryBox, { 
+            backgroundColor: darkMode ? '#1F2937' : '#F9FAFB',
+            borderColor: theme.border
+          }]}>
             <Text style={[styles.summaryText, { color: theme.text }]}>
-              💡 {product.healthSummary}
+              {product.healthSummary}
             </Text>
           </View>
         )}
+
+        {/* Good & Bad Contents */}
+        <View style={styles.contentsContainer}>
+          {goodContents.length > 0 && (
+            <View style={styles.contentSection}>
+              <Text style={[styles.contentTitle, { color: '#22C55E' }]}>
+                ✓ Good
+              </Text>
+              {goodContents.slice(0, 3).map((content, index) => (
+                <Text key={index} style={[styles.contentItem, { color: theme.textMuted }]}>
+                  • {content}
+                </Text>
+              ))}
+              {goodContents.length > 3 && (
+                <Text style={[styles.moreText, { color: theme.textMuted }]}>
+                  +{goodContents.length - 3} more
+                </Text>
+              )}
+            </View>
+          )}
+
+          {badContents.length > 0 && (
+            <View style={styles.contentSection}>
+              <Text style={[styles.contentTitle, { color: '#DC2626' }]}>
+                ✗ Concerns
+              </Text>
+              {badContents.slice(0, 3).map((content, index) => (
+                <Text key={index} style={[styles.contentItem, { color: theme.textMuted }]}>
+                  • {content}
+                </Text>
+              ))}
+              {badContents.length > 3 && (
+                <Text style={[styles.moreText, { color: theme.textMuted }]}>
+                  +{badContents.length - 3} more
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
       </View>
     );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>
-          Product Health Ratings
-        </Text>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.text }]}>Health Ratings</Text>
+          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+            AI-powered nutritional analysis
+          </Text>
+        </View>
 
+        {/* Content */}
         {loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#3B82F6" />
@@ -161,12 +188,13 @@ export default function RatingScreen({ theme, darkMode }) {
             </Text>
           </View>
         ) : products.length === 0 ? (
-          <View style={styles.centerContainer}>
-            <Text style={[styles.emptyMainText, { color: theme.textMuted }]}>
-              No products to rate yet
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>⭐</Text>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              No rated products yet
             </Text>
-            <Text style={[styles.emptySubText, { color: theme.textMuted }]}>
-              Add products in the Items tab to see their health ratings
+            <Text style={[styles.emptyDesc, { color: theme.textMuted }]}>
+              Add products with clear ingredient labels to see AI-powered health ratings
             </Text>
           </View>
         ) : (
@@ -187,116 +215,123 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 24,
+    padding: 20,
+    paddingTop: 80,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  header: {
     marginBottom: 24,
   },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+  },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 16,
   },
   card: {
     width: '100%',
-    maxWidth: 500,
-    borderWidth: 1,
+    maxWidth: 600,
     borderRadius: 12,
     padding: 20,
-    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   productName: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginRight: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  ingredientCount: {
+    fontSize: 13,
+  },
+  ratingBadge: {
+    alignItems: 'flex-end',
   },
   starsContainer: {
     flexDirection: 'row',
+    marginBottom: 4,
   },
   star: {
-    fontSize: 20,
-    marginLeft: 2,
+    fontSize: 18,
+    marginLeft: 1,
   },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
+  ratingLabel: {
+    fontSize: 12,
     fontWeight: '600',
-  },
-  goodIcon: {
-    fontSize: 18,
-    color: '#10B981',
-    marginRight: 8,
-    fontWeight: 'bold',
-  },
-  badIcon: {
-    fontSize: 18,
-    color: '#ef4444',
-    marginRight: 8,
-    fontWeight: 'bold',
-  },
-  listItem: {
-    flexDirection: 'row',
-    marginBottom: 6,
-    paddingLeft: 8,
-  },
-  bullet: {
-    fontSize: 16,
-    marginRight: 8,
-    color: '#9CA3AF',
-  },
-  listText: {
-    fontSize: 15,
-    flex: 1,
-    lineHeight: 22,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    paddingLeft: 8,
   },
   summaryBox: {
     padding: 12,
     borderRadius: 8,
-    marginTop: 12,
+    marginBottom: 16,
+    borderWidth: 1,
   },
   summaryText: {
     fontSize: 14,
     lineHeight: 20,
   },
+  contentsContainer: {
+    gap: 16,
+  },
+  contentSection: {
+    gap: 6,
+  },
+  contentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  contentItem: {
+    fontSize: 13,
+    lineHeight: 18,
+    paddingLeft: 8,
+  },
+  moreText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    paddingLeft: 8,
+  },
   centerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: 60,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 12,
   },
-  emptyMainText: {
-    fontSize: 18,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
   },
-  emptySubText: {
+  emptyDesc: {
     fontSize: 14,
     textAlign: 'center',
-    paddingHorizontal: 32,
+    lineHeight: 20,
   },
 });

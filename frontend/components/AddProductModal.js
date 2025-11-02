@@ -1,4 +1,4 @@
-// frontend/components/AddProductModal.js
+// frontend/components/AddProductModal.js - FIXED SAVE
 import React, { useState } from 'react';
 import {
   View,
@@ -16,41 +16,41 @@ import * as ImagePicker from 'expo-image-picker';
 import { analyzeImages, rateProduct } from '../services/api';
 
 export default function AddProductModal({ visible, onClose, onSave, editProduct, theme }) {
-  const [productName, setProductName] = useState(editProduct?.name || '');
-  const [mfgDate, setMfgDate] = useState(editProduct?.mfgDate || '');
-  const [expDate, setExpDate] = useState(editProduct?.expDate || '');
-  const [ingredients, setIngredients] = useState(
-    editProduct?.ingredients?.join(', ') || ''
-  );
+  const [productName, setProductName] = useState('');
+  const [mfgDate, setMfgDate] = useState('');
+  const [expDate, setExpDate] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
-  const [step, setStep] = useState(1); // 1: Input, 2: Analysis, 3: Review
+  const [analyzedData, setAnalyzedData] = useState(null);
 
-  // Reset form when modal opens/closes
   React.useEffect(() => {
     if (visible) {
       if (editProduct) {
         setProductName(editProduct.name || '');
         setMfgDate(editProduct.mfgDate || '');
         setExpDate(editProduct.expDate || '');
-        setIngredients(editProduct.ingredients?.join(', ') || '');
+        setAnalyzedData({
+          ingredients: editProduct.ingredients || [],
+          rating: editProduct.rating || 3,
+          goodContents: editProduct.goodContents || [],
+          badContents: editProduct.badContents || [],
+          healthSummary: editProduct.healthSummary || ''
+        });
       } else {
         setProductName('');
         setMfgDate('');
         setExpDate('');
-        setIngredients('');
+        setAnalyzedData(null);
       }
       setSelectedImages([]);
-      setStep(1);
     }
   }, [visible, editProduct]);
 
   const pickImages = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
-        Alert.alert('Permission Needed', 'Please grant camera roll permissions');
+        Alert.alert('Permission Needed', 'Please grant photo library permissions');
         return;
       }
 
@@ -58,15 +58,12 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
-        base64: false,
       });
 
       if (!result.canceled && result.assets) {
-        console.log('Selected images:', result.assets.length);
         setSelectedImages(result.assets);
       }
     } catch (error) {
-      console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick images');
     }
   };
@@ -74,7 +71,6 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      
       if (status !== 'granted') {
         Alert.alert('Permission Needed', 'Please grant camera permissions');
         return;
@@ -82,14 +78,12 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.8,
-        base64: false,
       });
 
       if (!result.canceled && result.assets) {
         setSelectedImages([...selectedImages, result.assets[0]]);
       }
     } catch (error) {
-      console.error('Camera error:', error);
       Alert.alert('Error', 'Failed to take photo');
     }
   };
@@ -101,39 +95,20 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
     }
 
     setAnalyzing(true);
-    setStep(2);
 
     try {
-      console.log('Starting image analysis...');
-      console.log('Platform:', Platform.OS);
-      console.log('Number of images:', selectedImages.length);
-
+      console.log('🔍 Analyzing images...');
+      
       let imageFiles;
-
       if (Platform.OS === 'web') {
-        // Web: Convert blob URLs to actual File objects
         imageFiles = await Promise.all(
           selectedImages.map(async (asset, index) => {
-            try {
-              console.log(`Fetching image ${index + 1}:`, asset.uri);
-              const response = await fetch(asset.uri);
-              const blob = await response.blob();
-              
-              // Create a File object from the blob
-              const file = new File([blob], `image_${index}.jpg`, { 
-                type: blob.type || 'image/jpeg' 
-              });
-              
-              console.log(`Image ${index + 1} converted:`, file.size, 'bytes');
-              return file;
-            } catch (error) {
-              console.error(`Failed to convert image ${index + 1}:`, error);
-              throw error;
-            }
+            const response = await fetch(asset.uri);
+            const blob = await response.blob();
+            return new File([blob], `image_${index}.jpg`, { type: 'image/jpeg' });
           })
         );
       } else {
-        // Mobile: Use URI directly
         imageFiles = selectedImages.map((asset, index) => ({
           uri: asset.uri,
           type: 'image/jpeg',
@@ -141,49 +116,73 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         }));
       }
 
-      console.log('Sending to backend...');
-      const response = await analyzeImages(imageFiles);
-      console.log('Backend response:', response);
+      const analysisResponse = await analyzeImages(imageFiles);
+      console.log('📊 Analysis:', analysisResponse);
 
-      if (response.success && response.data) {
-        const data = response.data;
-        
-        // Auto-fill form with extracted data
-        if (data.productName) setProductName(data.productName);
-        if (data.mfgDate) setMfgDate(data.mfgDate);
-        if (data.expDate) setExpDate(data.expDate);
-        if (data.ingredients && data.ingredients.length > 0) {
-          setIngredients(data.ingredients.join(', '));
-        }
-
-        Alert.alert('Success', 'Product information extracted!');
-        setStep(3); // Move to review step
-      } else {
+      if (!analysisResponse.success || !analysisResponse.data) {
         Alert.alert('Analysis Failed', 'Could not extract product information');
-        setStep(1);
+        setAnalyzing(false);
+        return;
       }
+
+      const data = analysisResponse.data;
+      
+      if (data.productName) setProductName(data.productName);
+      if (data.mfgDate) setMfgDate(data.mfgDate);
+      if (data.expDate) setExpDate(data.expDate);
+
+      if (data.ingredients && data.ingredients.length > 0) {
+        console.log('⭐ Getting health rating...');
+        try {
+          const ratingResponse = await rateProduct(data.ingredients, data.productName);
+          
+          if (ratingResponse.success && ratingResponse.analysis) {
+            setAnalyzedData({
+              ingredients: data.ingredients,
+              rating: ratingResponse.analysis.rating || 3,
+              goodContents: ratingResponse.analysis.goodContents || [],
+              badContents: ratingResponse.analysis.badContents || [],
+              healthSummary: ratingResponse.analysis.summary || ''
+            });
+            
+            Alert.alert(
+              'Success! ✅', 
+              `Found ${data.ingredients.length} ingredients\nRating: ${ratingResponse.analysis.rating}/5 ⭐`
+            );
+          }
+        } catch (ratingError) {
+          console.error('Rating error:', ratingError);
+          setAnalyzedData({
+            ingredients: data.ingredients,
+            rating: 3,
+            goodContents: [],
+            badContents: [],
+            healthSummary: ''
+          });
+          Alert.alert('Partial Success', 'Product info extracted, but health rating unavailable');
+        }
+      } else {
+        Alert.alert('Info Extracted', 'Basic info found, but no ingredients detected');
+        setAnalyzedData({
+          ingredients: [],
+          rating: 3,
+          goodContents: [],
+          badContents: [],
+          healthSummary: ''
+        });
+      }
+
     } catch (error) {
       console.error('Analysis error:', error);
-      let errorMessage = 'Failed to analyze images. ';
-      
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        errorMessage += error.response.data?.message || error.response.data?.error || 'Server error';
-      } else if (error.request) {
-        errorMessage += 'No response from server. Is backend running?';
-      } else {
-        errorMessage += error.message;
-      }
-      
-      Alert.alert('Error', errorMessage);
-      setStep(1);
+      Alert.alert('Error', 'Failed to analyze images');
     } finally {
       setAnalyzing(false);
     }
   };
 
   const handleSave = async () => {
-    // Validate required fields
+    console.log('💾 Attempting to save...');
+    
     if (!productName.trim()) {
       Alert.alert('Missing Info', 'Please enter product name');
       return;
@@ -193,224 +192,38 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       return;
     }
 
-    // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(expDate)) {
-      Alert.alert('Invalid Date', 'Expiry date must be in YYYY-MM-DD format\nExample: 2024-12-31');
+      Alert.alert('Invalid Date', 'Expiry date must be YYYY-MM-DD\nExample: 2024-12-31');
       return;
     }
     if (mfgDate && !dateRegex.test(mfgDate)) {
-      Alert.alert('Invalid Date', 'Manufacturing date must be in YYYY-MM-DD format\nExample: 2024-01-01');
+      Alert.alert('Invalid Date', 'Manufacturing date must be YYYY-MM-DD');
       return;
     }
 
-    setAnalyzing(true);
+    const productData = {
+      name: productName.trim(),
+      mfgDate: mfgDate.trim() || new Date().toISOString().split('T')[0],
+      expDate: expDate.trim(),
+      ingredients: analyzedData?.ingredients || [],
+      rating: analyzedData?.rating || 3,
+      goodContents: analyzedData?.goodContents || [],
+      badContents: analyzedData?.badContents || [],
+      healthSummary: analyzedData?.healthSummary || '',
+    };
+
+    console.log('Product data to save:', productData);
 
     try {
-      // Parse ingredients
-      const ingredientList = ingredients
-        .split(',')
-        .map(i => i.trim())
-        .filter(Boolean);
-
-      // Get health rating if ingredients provided
-      let rating = 3;
-      let goodContents = [];
-      let badContents = [];
-      let healthSummary = '';
-
-      if (ingredientList.length > 0) {
-        try {
-          console.log('Getting health rating...');
-          const ratingResponse = await rateProduct(ingredientList, productName);
-          console.log('Rating response:', ratingResponse);
-          
-          if (ratingResponse.success && ratingResponse.analysis) {
-            rating = ratingResponse.analysis.rating || 3;
-            goodContents = ratingResponse.analysis.goodContents || [];
-            badContents = ratingResponse.analysis.badContents || [];
-            healthSummary = ratingResponse.analysis.summary || '';
-          }
-        } catch (ratingError) {
-          console.error('Rating error:', ratingError);
-          // Continue without rating
-        }
-      }
-
-      // Prepare product data
-      const productData = {
-        name: productName.trim(),
-        mfgDate: mfgDate.trim() || new Date().toISOString().split('T')[0],
-        expDate: expDate.trim(),
-        ingredients: ingredientList,
-        rating,
-        goodContents,
-        badContents,
-        healthSummary,
-        createdAt: editProduct?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      console.log('Saving product:', productData);
       await onSave(productData);
+      console.log('✅ Save completed');
       onClose();
     } catch (error) {
-      console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save product: ' + error.message);
-    } finally {
-      setAnalyzing(false);
+      console.error('❌ Save error:', error);
+      // Error already shown by parent component
     }
   };
-
-  const renderStep1 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: theme.text }]}>
-        Step 1: Upload Product Images
-      </Text>
-
-      <View style={styles.imageButtons}>
-        <TouchableOpacity style={styles.imageButton} onPress={pickImages}>
-          <Text style={styles.imageButtonIcon}>📷</Text>
-          <Text style={styles.imageButtonText}>Gallery</Text>
-        </TouchableOpacity>
-
-        {Platform.OS !== 'web' && (
-          <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
-            <Text style={styles.imageButtonIcon}>📸</Text>
-            <Text style={styles.imageButtonText}>Camera</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {selectedImages.length > 0 && (
-        <View style={styles.imagePreview}>
-          <Text style={[styles.label, { color: theme.text }]}>
-            ✓ {selectedImages.length} image(s) selected
-          </Text>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={[
-          styles.analyzeButton,
-          selectedImages.length === 0 && styles.buttonDisabled
-        ]}
-        onPress={handleAnalyzeImages}
-        disabled={selectedImages.length === 0}
-      >
-        <Text style={styles.buttonText}>🔍 Analyze Images</Text>
-      </TouchableOpacity>
-
-      <View style={styles.divider}>
-        <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-        <Text style={[styles.dividerText, { color: theme.textMuted }]}>OR</Text>
-        <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-      </View>
-
-      <TouchableOpacity
-        style={styles.manualButton}
-        onPress={() => setStep(3)}
-      >
-        <Text style={[styles.manualButtonText, { color: theme.primary }]}>
-          ✏️ Enter Manually
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: theme.text }]}>
-        Analyzing Images...
-      </Text>
-      <ActivityIndicator size="large" color="#3B82F6" style={styles.loader} />
-      <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-        Extracting product information using AI
-      </Text>
-    </View>
-  );
-
-  const renderStep3 = () => (
-    <ScrollView style={styles.formScroll}>
-      <Text style={[styles.stepTitle, { color: theme.text }]}>
-        Review & Save
-      </Text>
-
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: theme.text }]}>Product Name *</Text>
-        <TextInput
-          style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
-          value={productName}
-          onChangeText={setProductName}
-          placeholder="e.g., Organic Whole Wheat Bread"
-          placeholderTextColor={theme.textMuted}
-        />
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupHalf]}>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Mfg Date
-          </Text>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
-            value={mfgDate}
-            onChangeText={setMfgDate}
-            placeholder="2024-01-01"
-            placeholderTextColor={theme.textMuted}
-          />
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupHalf]}>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Exp Date *
-          </Text>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }]}
-            value={expDate}
-            onChangeText={setExpDate}
-            placeholder="2024-12-31"
-            placeholderTextColor={theme.textMuted}
-          />
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <Text style={[styles.label, { color: theme.text }]}>
-          Ingredients (comma-separated)
-        </Text>
-        <TextInput
-          style={[
-            styles.input,
-            styles.textArea,
-            { color: theme.text, borderColor: theme.border, backgroundColor: theme.card }
-          ]}
-          value={ingredients}
-          onChangeText={setIngredients}
-          placeholder="wheat flour, water, yeast, salt"
-          placeholderTextColor={theme.textMuted}
-          multiline
-          numberOfLines={4}
-        />
-      </View>
-
-      <View style={styles.formActions}>
-        <TouchableOpacity
-          style={[styles.saveButton, analyzing && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={analyzing}
-        >
-          {analyzing ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {editProduct ? '💾 Update' : '✅ Save'} Product
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
 
   return (
     <Modal
@@ -423,18 +236,171 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {editProduct ? 'Edit Product' : 'Add New Product'}
+              {editProduct ? 'Edit Product' : 'Add Product'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalBody}>
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-          </View>
+          <ScrollView style={styles.modalBody}>
+            {/* Image Upload */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                📸 Product Images
+              </Text>
+              <Text style={[styles.sectionDesc, { color: theme.textMuted }]}>
+                Take clear photos of ingredient labels
+              </Text>
+              
+              <View style={styles.imageButtons}>
+                <TouchableOpacity style={styles.imageButton} onPress={pickImages}>
+                  <Text style={styles.imageButtonIcon}>📷</Text>
+                  <Text style={styles.imageButtonText}>Gallery</Text>
+                </TouchableOpacity>
+
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+                    <Text style={styles.imageButtonIcon}>📸</Text>
+                    <Text style={styles.imageButtonText}>Camera</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {selectedImages.length > 0 && (
+                <View style={styles.imageCount}>
+                  <Text style={[styles.imageCountText, { color: theme.text }]}>
+                    ✓ {selectedImages.length} image(s)
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.analyzeButton,
+                  (selectedImages.length === 0 || analyzing) && styles.buttonDisabled
+                ]}
+                onPress={handleAnalyzeImages}
+                disabled={selectedImages.length === 0 || analyzing}
+              >
+                {analyzing ? (
+                  <>
+                    <ActivityIndicator color="#FFF" size="small" />
+                    <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                      Analyzing...
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.buttonText}>🔍 Analyze</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Manual Entry */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                ✏️ Product Details
+              </Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: theme.text }]}>Name *</Text>
+                <TextInput
+                  style={[styles.input, { 
+                    color: theme.text, 
+                    borderColor: theme.border,
+                    backgroundColor: theme.bg 
+                  }]}
+                  value={productName}
+                  onChangeText={setProductName}
+                  placeholder="Product name"
+                  placeholderTextColor={theme.textMuted}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={styles.inputGroupHalf}>
+                  <Text style={[styles.label, { color: theme.text }]}>Mfg Date</Text>
+                  <TextInput
+                    style={[styles.input, { 
+                      color: theme.text, 
+                      borderColor: theme.border,
+                      backgroundColor: theme.bg 
+                    }]}
+                    value={mfgDate}
+                    onChangeText={setMfgDate}
+                    placeholder="2024-01-01"
+                    placeholderTextColor={theme.textMuted}
+                  />
+                </View>
+
+                <View style={styles.inputGroupHalf}>
+                  <Text style={[styles.label, { color: theme.text }]}>Exp Date *</Text>
+                  <TextInput
+                    style={[styles.input, { 
+                      color: theme.text, 
+                      borderColor: theme.border,
+                      backgroundColor: theme.bg 
+                    }]}
+                    value={expDate}
+                    onChangeText={setExpDate}
+                    placeholder="2024-12-31"
+                    placeholderTextColor={theme.textMuted}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Analysis Results */}
+            {analyzedData && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  📊 Analysis
+                </Text>
+                
+                {analyzedData.ingredients.length > 0 && (
+                  <View style={styles.resultBox}>
+                    <Text style={[styles.resultLabel, { color: theme.textMuted }]}>
+                      Ingredients: {analyzedData.ingredients.length} found
+                    </Text>
+                  </View>
+                )}
+
+                {analyzedData.rating && (
+                  <View style={styles.resultBox}>
+                    <Text style={[styles.resultLabel, { color: theme.textMuted }]}>
+                      Health Rating:
+                    </Text>
+                    <View style={styles.ratingDisplay}>
+                      {[...Array(5)].map((_, i) => (
+                        <Text key={i} style={styles.ratingStar}>
+                          {i < analyzedData.rating ? '⭐' : '☆'}
+                        </Text>
+                      ))}
+                      <Text style={[styles.ratingText, { color: theme.text }]}>
+                        {analyzedData.rating}/5
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Save Button */}
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                (!productName || !expDate) && styles.buttonDisabled
+              ]}
+              onPress={handleSave}
+              disabled={!productName || !expDate}
+            >
+              <Text style={styles.buttonText}>
+                {editProduct ? '💾 Update' : '✅ Save'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -464,7 +430,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
   },
   closeButton: {
@@ -480,122 +446,115 @@ const styles = StyleSheet.create({
   modalBody: {
     flex: 1,
   },
-  stepContainer: {
-    padding: 24,
+  section: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  stepTitle: {
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 20,
+    marginBottom: 4,
+  },
+  sectionDesc: {
+    fontSize: 13,
+    marginBottom: 16,
   },
   imageButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   imageButton: {
     flex: 1,
     backgroundColor: '#F3F4F6',
-    padding: 20,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   imageButtonIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 28,
+    marginBottom: 6,
   },
   imageButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#374151',
   },
-  imagePreview: {
-    padding: 16,
+  imageCount: {
+    padding: 12,
     backgroundColor: '#DBEAFE',
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  imageCountText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   analyzeButton: {
     backgroundColor: '#3B82F6',
-    padding: 16,
+    padding: 14,
     borderRadius: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
+  inputGroup: {
+    marginBottom: 16,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-  },
-  manualButton: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  manualButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loader: {
-    marginVertical: 32,
-  },
-  loadingText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  formScroll: {
-    flex: 1,
-    padding: 24,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formGroupHalf: {
-    flex: 1,
-  },
-  formRow: {
+  inputRow: {
     flexDirection: 'row',
     gap: 12,
+  },
+  inputGroupHalf: {
+    flex: 1,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 15,
   },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  resultBox: {
+    marginBottom: 12,
   },
-  formActions: {
-    marginTop: 24,
-    marginBottom: 40,
+  resultLabel: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  ratingDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingStar: {
+    fontSize: 18,
+  },
+  ratingText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   saveButton: {
     backgroundColor: '#10B981',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+    margin: 20,
   },
 });
