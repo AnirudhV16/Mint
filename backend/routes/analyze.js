@@ -181,7 +181,7 @@ router.post('/', upload.array('images', 4), async (req, res) => {
     console.log('\n🤖 Extracting structured data with Gemini...');
     const aiStartTime = Date.now();
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `You are analyzing text extracted from a food product label. Extract structured information.
 
