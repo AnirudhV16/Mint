@@ -1,6 +1,6 @@
-// frontend/components/Sidebar.js - TEST VERSION (NO ALERT)
+// frontend/components/Sidebar.js - OVERLAY WITH BACKDROP
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, TouchableWithoutFeedback } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ 
@@ -13,30 +13,33 @@ export default function Sidebar({
   theme,
   user 
 }) {
-  const slideAnim = React.useRef(new Animated.Value(isOpen ? 0 : -280)).current;
+  const slideAnim = React.useRef(new Animated.Value(-280)).current;
+  const backdropAnim = React.useRef(new Animated.Value(0)).current;
   const { logout } = useAuth();
 
   React.useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: isOpen ? 0 : -280,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: isOpen ? 0 : -280,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropAnim, {
+        toValue: isOpen ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
   }, [isOpen]);
 
   const handleLogout = async () => {
-    console.log('=== LOGOUT CLICKED - DIRECT CALL (NO ALERT) ===');
-    console.log('Current user:', user?.email);
-    console.log('Logout function exists?', !!logout);
-    console.log('Logout type:', typeof logout);
+    console.log('🚪 Logout clicked');
     
     if (!logout) {
       console.error('❌ logout is null/undefined');
       return;
     }
     
-    // DIRECT CALL - NO CONFIRMATION
-    console.log('Calling logout() directly...');
     try {
       const result = await logout();
       console.log('Logout result:', result);
@@ -44,11 +47,8 @@ export default function Sidebar({
       if (result && result.success) {
         console.log('✅ Logout successful!');
         
-        // Force reload on web
         if (Platform.OS === 'web') {
-          console.log('Reloading page in 100ms...');
           setTimeout(() => {
-            console.log('NOW reloading...');
             window.location.reload();
           }, 100);
         }
@@ -57,8 +57,6 @@ export default function Sidebar({
       }
     } catch (error) {
       console.error('❌ Exception during logout:', error);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
     }
   };
 
@@ -69,28 +67,58 @@ export default function Sidebar({
     return 'U';
   };
 
-  return (
-    <>
+  if (!isOpen) {
+    // Only show toggle button when closed
+    return (
       <TouchableOpacity
         style={[styles.toggleButton, { backgroundColor: theme.card }]}
         onPress={onToggle}
       >
-        <View style={styles.toggleIcon}>
-          <View style={styles.hamburger}>
-            <View style={[styles.line, { backgroundColor: theme.text }]} />
-            <View style={[styles.line, { backgroundColor: theme.text }]} />
-            <View style={[styles.line, { backgroundColor: theme.text }]} />
-          </View>
+        <View style={styles.hamburger}>
+          <View style={[styles.line, { backgroundColor: theme.text }]} />
+          <View style={[styles.line, { backgroundColor: theme.text }]} />
+          <View style={[styles.line, { backgroundColor: theme.text }]} />
         </View>
       </TouchableOpacity>
+    );
+  }
 
+  return (
+    <>
+      {/* Backdrop - Click to close */}
+      <TouchableWithoutFeedback onPress={onToggle}>
+        <Animated.View
+          style={[
+            styles.backdrop,
+            {
+              opacity: backdropAnim,
+              pointerEvents: isOpen ? 'auto' : 'none',
+            }
+          ]}
+        />
+      </TouchableWithoutFeedback>
+
+      {/* Sidebar */}
       <Animated.View
         style={[
           styles.sidebar,
-          { backgroundColor: theme.sidebar, transform: [{ translateX: slideAnim }] }
+          { 
+            backgroundColor: theme.sidebar,
+            borderRightColor: theme.border,
+            transform: [{ translateX: slideAnim }] 
+          }
         ]}
       >
-        <View style={styles.profile}>
+        {/* Close Button */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onToggle}
+        >
+          <Text style={[styles.closeButtonText, { color: theme.text }]}>✕</Text>
+        </TouchableOpacity>
+
+        {/* Profile */}
+        <View style={[styles.profile, { borderBottomColor: theme.border }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getUserInitials()}</Text>
           </View>
@@ -99,18 +127,14 @@ export default function Sidebar({
           </Text>
         </View>
 
+        {/* Navigation Tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[
               styles.tab,
-              { 
-                backgroundColor: activeTab === 'items' ? '#3B82F6' : 'transparent',
-              }
+              activeTab === 'items' && styles.tabActive
             ]}
-            onPress={() => {
-              console.log('Items tab clicked');
-              onTabChange('items');
-            }}
+            onPress={() => onTabChange('items')}
           >
             <Text style={styles.tabEmoji}>🧺</Text>
             <Text style={[
@@ -124,14 +148,9 @@ export default function Sidebar({
           <TouchableOpacity
             style={[
               styles.tab,
-              { 
-                backgroundColor: activeTab === 'recipe' ? '#3B82F6' : 'transparent',
-              }
+              activeTab === 'recipe' && styles.tabActive
             ]}
-            onPress={() => {
-              console.log('Recipe tab clicked');
-              onTabChange('recipe');
-            }}
+            onPress={() => onTabChange('recipe')}
           >
             <Text style={styles.tabEmoji}>🍳</Text>
             <Text style={[
@@ -145,14 +164,9 @@ export default function Sidebar({
           <TouchableOpacity
             style={[
               styles.tab,
-              { 
-                backgroundColor: activeTab === 'rating' ? '#3B82F6' : 'transparent',
-              }
+              activeTab === 'rating' && styles.tabActive
             ]}
-            onPress={() => {
-              console.log('Rating tab clicked');
-              onTabChange('rating');
-            }}
+            onPress={() => onTabChange('rating')}
           >
             <Text style={styles.tabEmoji}>⭐</Text>
             <Text style={[
@@ -164,13 +178,11 @@ export default function Sidebar({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.bottomSection}>
+        {/* Bottom Section */}
+        <View style={[styles.bottomSection, { borderTopColor: theme.border }]}>
           <TouchableOpacity
             style={styles.themeButton}
-            onPress={() => {
-              console.log('Theme toggle clicked');
-              onThemeToggle();
-            }}
+            onPress={onThemeToggle}
           >
             <Text style={styles.themeIcon}>{darkMode ? '🌙' : '☀️'}</Text>
             <Text style={[styles.themeText, { color: theme.textMuted }]}>
@@ -184,7 +196,7 @@ export default function Sidebar({
             activeOpacity={0.7}
           >
             <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={styles.logoutText}>Logout (TEST)</Text>
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -202,18 +214,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 100,
-    elevation: 3,
+    zIndex: 1000,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-  },
-  toggleIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   hamburger: {
     width: 20,
@@ -224,6 +230,15 @@ const styles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 999,
+  },
   sidebar: {
     position: 'absolute',
     left: 0,
@@ -231,22 +246,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 280,
     padding: 24,
-    paddingTop: 80,
-    zIndex: 50,
+    paddingTop: 60,
+    zIndex: 1000,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  closeButtonText: {
+    fontSize: 28,
+    fontWeight: '300',
   },
   profile: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   avatar: {
     width: 64,
@@ -279,6 +306,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 12,
   },
+  tabActive: {
+    backgroundColor: '#3B82F6',
+  },
   tabEmoji: {
     fontSize: 20,
   },
@@ -290,7 +320,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
   themeButton: {
     flexDirection: 'row',

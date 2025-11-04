@@ -1,4 +1,4 @@
-// frontend/App.js - PROFESSIONAL DESIGN
+// frontend/App.js - OVERLAY SIDEBAR (NO CONTENT SHIFT)
 import React, { useState } from 'react';
 import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,10 +18,8 @@ function AppContent() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    // Auto-close sidebar on mobile after selection
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
+    // Auto-close sidebar after selection
+    setSidebarOpen(false);
   };
 
   // Professional theme colors
@@ -49,6 +47,14 @@ function AppContent() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      {/* Main Content - ALWAYS FULL WIDTH */}
+      <View style={styles.content}>
+        {activeTab === 'items' && <ItemScreen theme={theme} darkMode={darkMode} />}
+        {activeTab === 'recipe' && <RecipeScreen theme={theme} darkMode={darkMode} />}
+        {activeTab === 'rating' && <RatingScreen theme={theme} darkMode={darkMode} />}
+      </View>
+
+      {/* Sidebar - OVERLAYS ON TOP */}
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -59,15 +65,6 @@ function AppContent() {
         theme={theme}
         user={user}
       />
-
-      <View style={[
-        styles.content, 
-        sidebarOpen && styles.contentShifted
-      ]}>
-        {activeTab === 'items' && <ItemScreen theme={theme} darkMode={darkMode} />}
-        {activeTab === 'recipe' && <RecipeScreen theme={theme} darkMode={darkMode} />}
-        {activeTab === 'rating' && <RatingScreen theme={theme} darkMode={darkMode} />}
-      </View>
     </View>
   );
 }
@@ -92,9 +89,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  contentShifted: {
-    marginLeft: 280,
+    // Content takes full width - no margin shift
   },
   loadingContainer: {
     flex: 1,
