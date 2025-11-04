@@ -1,8 +1,9 @@
-// frontend/App.js - OVERLAY SIDEBAR (NO CONTENT SHIFT)
-import React, { useState } from 'react';
+// frontend/App.js - WITH NOTIFICATION SETUP
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import notificationService from './services/notificationService';
 import Sidebar from './components/Sidebar';
 import ItemScreen from './components/ItemScreen';
 import RecipeScreen from './components/RecipeScreen';
@@ -16,13 +17,39 @@ function AppContent() {
   
   const { user, loading } = useAuth();
 
+  // Register for notifications when user logs in
+  useEffect(() => {
+    if (user) {
+      console.log('📱 User logged in, registering for notifications...');
+      
+      // Register for push notifications
+      notificationService.registerForPushNotifications(user.uid)
+        .then(token => {
+          if (token) {
+            console.log('✅ Push notifications registered');
+          } else {
+            console.log('⚠️ Could not register push notifications');
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error registering notifications:', error);
+        });
+
+      // Set up notification listeners
+      notificationService.setupNotificationListeners();
+
+      // Cleanup on unmount or logout
+      return () => {
+        notificationService.removeNotificationListeners();
+      };
+    }
+  }, [user]);
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    // Auto-close sidebar after selection
     setSidebarOpen(false);
   };
 
-  // Professional theme colors
   const theme = {
     bg: darkMode ? '#0F172A' : '#F8FAFC',
     card: darkMode ? '#1E293B' : '#FFFFFF',
@@ -47,14 +74,12 @@ function AppContent() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Main Content - ALWAYS FULL WIDTH */}
       <View style={styles.content}>
         {activeTab === 'items' && <ItemScreen theme={theme} darkMode={darkMode} />}
         {activeTab === 'recipe' && <RecipeScreen theme={theme} darkMode={darkMode} />}
         {activeTab === 'rating' && <RatingScreen theme={theme} darkMode={darkMode} />}
       </View>
 
-      {/* Sidebar - OVERLAYS ON TOP */}
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -89,7 +114,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // Content takes full width - no margin shift
   },
   loadingContainer: {
     flex: 1,

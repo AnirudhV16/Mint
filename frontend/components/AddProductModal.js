@@ -1,4 +1,4 @@
-// frontend/components/AddProductModal.js - MOBILE FIXED
+// frontend/components/AddProductModal.js - WITH PERMISSION HANDLING
 import React, { useState } from 'react';
 import {
   View,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { analyzeImages, rateProduct } from '../services/api';
+import permissionService from '../services/permissionService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -52,9 +53,11 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
   const pickFromGallery = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library');
+      // Check and request permission
+      const hasPermission = await permissionService.ensurePermission('photos', true);
+      
+      if (!hasPermission) {
+        console.log('⚠️ Photo library permission not granted');
         return;
       }
 
@@ -63,6 +66,8 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         Alert.alert('Limit Reached', 'You can only select up to 4 images');
         return;
       }
+
+      console.log('📸 Opening photo library...');
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -89,11 +94,15 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         return;
       }
 
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your camera');
+      // Check and request permission with explanation
+      const hasPermission = await permissionService.ensurePermission('camera', true);
+      
+      if (!hasPermission) {
+        console.log('⚠️ Camera permission not granted');
         return;
       }
+
+      console.log('📷 Opening camera...');
 
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.7,

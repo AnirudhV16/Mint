@@ -9,30 +9,42 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#3B82F6"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourname.aifoodtracker",
-      "buildNumber": "1.0.0"
+      "bundleIdentifier": "com.yourcompany.aifoodtracker",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs camera access to take photos of food product labels for ingredient analysis.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select product images for analysis.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos to your library.",
+        "NSMicrophoneUsageDescription": "This app does not use the microphone."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#3B82F6"
       },
-      "package": "com.yourname.aifoodtracker",
+      "package": "com.yourcompany.aifoodtracker",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
         "NOTIFICATIONS",
-        "INTERNET"
-      ]
+        "POST_NOTIFICATIONS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "useNextNotificationsApi": true
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -42,15 +54,33 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to upload product images.",
-          "cameraPermission": "The app needs access to your camera to take product photos."
+          "photosPermission": "The app needs access to your photos to upload product images for ingredient analysis.",
+          "cameraPermission": "The app needs camera access to take photos of food product labels and read ingredients."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#3B82F6",
+          "sounds": [
+            "./assets/notification-sound.wav"
+          ],
+          "androidMode": "default",
+          "androidCollapsedTitle": "Food Tracker"
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "your-project-id-here"
       }
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#3B82F6",
+      "androidMode": "default",
+      "androidCollapsedTitle": "{{unread_count}} new notifications"
     }
   }
 }
