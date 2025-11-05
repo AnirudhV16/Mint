@@ -1,4 +1,4 @@
-// frontend/components/AddProductModal.js - WITH PERMISSION HANDLING
+// frontend/components/AddProductModal.js - PRODUCTION ERROR HANDLING
 import React, { useState } from 'react';
 import {
   View,
@@ -27,6 +27,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
   const [selectedImages, setSelectedImages] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzedData, setAnalyzedData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(''); // Main error display
 
   React.useEffect(() => {
     if (visible) {
@@ -48,26 +49,29 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         setAnalyzedData(null);
       }
       setSelectedImages([]);
+      setErrorMessage(''); // Clear error on open
     }
   }, [visible, editProduct]);
 
   const pickFromGallery = async () => {
     try {
-      // Check and request permission
+      setErrorMessage(''); // Clear previous errors
+      
+      const remainingSlots = 4 - selectedImages.length;
+      
+      // CHECK LIMIT BEFORE OPENING PICKER
+      if (remainingSlots <= 0) {
+        setErrorMessage('Image limit reached. Maximum 4 images allowed.');
+        return; // STOP HERE - Don't open picker
+      }
+
+      // Check permission
       const hasPermission = await permissionService.ensurePermission('photos', true);
       
       if (!hasPermission) {
-        console.log('⚠️ Photo library permission not granted');
+        setErrorMessage('Photo library access denied. Please enable in settings.');
         return;
       }
-
-      const remainingSlots = 4 - selectedImages.length;
-      if (remainingSlots <= 0) {
-        Alert.alert('Limit Reached', 'You can only select up to 4 images');
-        return;
-      }
-
-      console.log('📸 Opening photo library...');
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -78,31 +82,38 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
       if (!result.canceled && result.assets) {
         const newImages = result.assets.slice(0, remainingSlots);
+        
+        // Check if trying to add more than allowed
+        if (result.assets.length > remainingSlots) {
+          setErrorMessage(`Only ${remainingSlots} more image(s) allowed. ${newImages.length} added.`);
+        }
+        
         setSelectedImages([...selectedImages, ...newImages]);
         console.log(`✅ Added ${newImages.length} image(s) from gallery`);
       }
     } catch (error) {
       console.error('Gallery error:', error);
-      Alert.alert('Error', 'Failed to pick images from gallery');
+      setErrorMessage('Failed to pick images. Please try again.');
     }
   };
 
   const takePhoto = async () => {
     try {
+      setErrorMessage(''); // Clear previous errors
+      
+      // CHECK LIMIT BEFORE OPENING CAMERA
       if (selectedImages.length >= 4) {
-        Alert.alert('Limit Reached', 'You can only select up to 4 images');
-        return;
+        setErrorMessage('Image limit reached. Maximum 4 images allowed.');
+        return; // STOP HERE - Don't open camera
       }
 
-      // Check and request permission with explanation
+      // Check permission
       const hasPermission = await permissionService.ensurePermission('camera', true);
       
       if (!hasPermission) {
-        console.log('⚠️ Camera permission not granted');
+        setErrorMessage('Camera access denied. Please enable in settings.');
         return;
       }
-
-      console.log('📷 Opening camera...');
 
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.7,
@@ -115,27 +126,26 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       }
     } catch (error) {
       console.error('Camera error:', error);
-      Alert.alert('Error', 'Failed to take photo');
+      setErrorMessage('Failed to take photo. Please try again.');
     }
   };
 
   const removeImage = (index) => {
     const newImages = selectedImages.filter((_, i) => i !== index);
     setSelectedImages(newImages);
-    console.log(`Removed image ${index + 1}`);
+    setErrorMessage(''); // Clear error when removing images
   };
 
   const handleAnalyzeImages = async () => {
     if (selectedImages.length === 0) {
-      Alert.alert('No Images', 'Please select or take photos first');
+      setErrorMessage('Please add at least one image to analyze');
       return;
     }
 
     setAnalyzing(true);
+    setErrorMessage(''); // Clear previous errors
 
     try {
-      console.log('🔍 Analyzing', selectedImages.length, 'image(s)...');
-      
       let imageFiles;
       if (Platform.OS === 'web') {
         imageFiles = await Promise.all(
@@ -154,10 +164,9 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       }
 
       const analysisResponse = await analyzeImages(imageFiles);
-      console.log('📊 Analysis response:', analysisResponse.success);
 
       if (!analysisResponse.success || !analysisResponse.data) {
-        Alert.alert('Analysis Failed', analysisResponse.message || 'Could not extract information');
+        setErrorMessage(analysisResponse.message || 'Could not extract text from images. Please take clearer photos.');
         setAnalyzing(false);
         return;
       }
@@ -169,7 +178,6 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       if (data.expDate) setExpDate(data.expDate);
 
       if (data.ingredients && data.ingredients.length > 0) {
-        console.log('⭐ Getting health rating...');
         try {
           const ratingResponse = await rateProduct(data.ingredients, data.productName);
           
@@ -186,9 +194,19 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
               'Success! ✅', 
               `Found ${data.ingredients.length} ingredients\nRating: ${ratingResponse.analysis.rating}/5 ⭐`
             );
+          } else {
+            setErrorMessage('Product info extracted, but health rating unavailable');
+            setAnalyzedData({
+              ingredients: data.ingredients,
+              rating: 3,
+              goodContents: [],
+              badContents: [],
+              healthSummary: ''
+            });
           }
         } catch (ratingError) {
           console.error('Rating error:', ratingError);
+          setErrorMessage('Product info extracted, but health rating failed');
           setAnalyzedData({
             ingredients: data.ingredients,
             rating: 3,
@@ -196,10 +214,9 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
             badContents: [],
             healthSummary: ''
           });
-          Alert.alert('Partial Success', 'Product info extracted, but health rating unavailable');
         }
       } else {
-        Alert.alert('Info Extracted', 'Basic info found, but no ingredients detected');
+        setErrorMessage('Basic info found, but no ingredients detected. Try different images.');
         setAnalyzedData({
           ingredients: [],
           rating: 3,
@@ -211,29 +228,47 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
     } catch (error) {
       console.error('Analysis error:', error);
-      Alert.alert('Error', error.message || 'Failed to analyze images');
+      
+      // Show user-friendly error messages
+      if (error.response) {
+        if (error.response.status === 413) {
+          setErrorMessage('Images are too large. Please use smaller images.');
+        } else if (error.response.status === 500) {
+          setErrorMessage('Server error. Please try again later.');
+        } else {
+          setErrorMessage(error.response.data?.message || 'Analysis failed. Please try again.');
+        }
+      } else if (error.message.includes('Network')) {
+        setErrorMessage('Network error. Check your internet connection.');
+      } else if (error.message.includes('timeout')) {
+        setErrorMessage('Request timed out. Please try again.');
+      } else {
+        setErrorMessage('Failed to analyze images. Please try again.');
+      }
     } finally {
       setAnalyzing(false);
     }
   };
 
   const handleSave = async () => {
+    setErrorMessage(''); // Clear previous errors
+    
     if (!productName.trim()) {
-      Alert.alert('Missing Info', 'Please enter product name');
+      setErrorMessage('Please enter product name');
       return;
     }
     if (!expDate.trim()) {
-      Alert.alert('Missing Info', 'Please enter expiry date');
+      setErrorMessage('Please enter expiry date');
       return;
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(expDate)) {
-      Alert.alert('Invalid Date', 'Expiry date must be YYYY-MM-DD\nExample: 2024-12-31');
+      setErrorMessage('Expiry date must be in YYYY-MM-DD format (e.g., 2024-12-31)');
       return;
     }
     if (mfgDate && !dateRegex.test(mfgDate)) {
-      Alert.alert('Invalid Date', 'Manufacturing date must be YYYY-MM-DD');
+      setErrorMessage('Manufacturing date must be in YYYY-MM-DD format');
       return;
     }
 
@@ -253,6 +288,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       onClose();
     } catch (error) {
       console.error('Save error:', error);
+      setErrorMessage('Failed to save product. Please try again.');
     }
   };
 
@@ -281,10 +317,24 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* ERROR MESSAGE DISPLAY - Prominent */}
+          {errorMessage ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              <TouchableOpacity 
+                onPress={() => setErrorMessage('')}
+                style={styles.errorClose}
+              >
+                <Text style={styles.errorCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Image Upload Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              📸 Product Images (Max 4)
+              📸 Product Images ({selectedImages.length}/4)
             </Text>
             <Text style={[styles.sectionDesc, { color: theme.textMuted }]}>
               Take clear photos of ingredient labels
@@ -297,7 +347,9 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
                 disabled={selectedImages.length >= 4}
               >
                 <Text style={styles.imageButtonIcon}>📸</Text>
-                <Text style={styles.imageButtonText}>Camera</Text>
+                <Text style={styles.imageButtonText}>
+                  {selectedImages.length >= 4 ? 'Limit Reached' : 'Camera'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -306,16 +358,15 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
                 disabled={selectedImages.length >= 4}
               >
                 <Text style={styles.imageButtonIcon}>📷</Text>
-                <Text style={styles.imageButtonText}>Gallery</Text>
+                <Text style={styles.imageButtonText}>
+                  {selectedImages.length >= 4 ? 'Limit Reached' : 'Gallery'}
+                </Text>
               </TouchableOpacity>
             </View>
 
             {/* Image Preview */}
             {selectedImages.length > 0 && (
               <View style={styles.imagePreviewContainer}>
-                <Text style={[styles.imageCountText, { color: theme.text }]}>
-                  {selectedImages.length}/4 images selected
-                </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                   {selectedImages.map((image, index) => (
                     <View key={index} style={styles.imagePreview}>
@@ -369,7 +420,10 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
                   backgroundColor: theme.card 
                 }]}
                 value={productName}
-                onChangeText={setProductName}
+                onChangeText={(text) => {
+                  setProductName(text);
+                  setErrorMessage(''); // Clear error on input
+                }}
                 placeholder="Product name"
                 placeholderTextColor={theme.textMuted}
               />
@@ -385,7 +439,10 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
                     backgroundColor: theme.card 
                   }]}
                   value={mfgDate}
-                  onChangeText={setMfgDate}
+                  onChangeText={(text) => {
+                    setMfgDate(text);
+                    setErrorMessage('');
+                  }}
                   placeholder="2024-01-01"
                   placeholderTextColor={theme.textMuted}
                 />
@@ -400,7 +457,10 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
                     backgroundColor: theme.card 
                   }]}
                   value={expDate}
-                  onChangeText={setExpDate}
+                  onChangeText={(text) => {
+                    setExpDate(text);
+                    setErrorMessage('');
+                  }}
                   placeholder="2024-12-31"
                   placeholderTextColor={theme.textMuted}
                 />
@@ -502,6 +562,35 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+  // ERROR CONTAINER - Prominent display
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  errorIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '600',
+  },
+  errorClose: {
+    padding: 4,
+  },
+  errorCloseText: {
+    fontSize: 18,
+    color: '#DC2626',
+    fontWeight: 'bold',
+  },
   section: {
     marginBottom: 24,
   },
@@ -539,11 +628,6 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     marginBottom: 16,
-  },
-  imageCountText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
   },
   imageScroll: {
     flexDirection: 'row',

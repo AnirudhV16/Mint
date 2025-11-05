@@ -1,4 +1,4 @@
-// frontend/components/LoginScreen.js - ENHANCED WITH DETAILED VALIDATION
+// frontend/components/LoginScreen.js - PRODUCTION-READY ERROR HANDLING
 import React, { useState } from 'react';
 import {
   View,
@@ -27,10 +27,13 @@ export default function LoginScreen({ theme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Real-time validation states
+  // Real-time validation states - ONLY for signup
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  
+  // Main error message (shown prominently)
+  const [mainError, setMainError] = useState('');
   
   const { login, signup } = useAuth();
 
@@ -52,10 +55,12 @@ export default function LoginScreen({ theme }) {
     return { label: 'Strong', color: '#22C55E', score: strength };
   };
 
-  const passwordStrength = password ? checkPasswordStrength(password) : null;
+  const passwordStrength = password && isSignup ? checkPasswordStrength(password) : null;
 
-  // Real-time email validation
+  // Real-time email validation - ONLY in signup mode
   const validateEmail = (email) => {
+    if (!isSignup) return; // Skip validation in login mode
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
       setEmailError('');
@@ -69,8 +74,10 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-  // Real-time password validation
+  // Real-time password validation - ONLY in signup mode
   const validatePassword = (pass) => {
+    if (!isSignup) return; // Skip validation in login mode
+    
     if (!pass) {
       setPasswordError('');
       return true;
@@ -86,7 +93,7 @@ export default function LoginScreen({ theme }) {
     const hasNumber = /[0-9]/.test(pass);
     
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      setPasswordError('Password must contain uppercase, lowercase, and number');
+      setPasswordError('Must contain uppercase, lowercase, and number');
       return false;
     }
     
@@ -94,9 +101,11 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-  // Confirm password validation
+  // Confirm password validation - ONLY in signup mode
   const validateConfirmPassword = (confirm) => {
-    if (!confirm && isSignup) {
+    if (!isSignup) return; // Skip validation in login mode
+    
+    if (!confirm) {
       setConfirmPasswordError('');
       return true;
     }
@@ -114,7 +123,6 @@ export default function LoginScreen({ theme }) {
       const hasPermission = await permissionService.ensurePermission('photos', true);
       
       if (!hasPermission) {
-        console.log('⚠️ Photo library permission not granted');
         return;
       }
 
@@ -127,11 +135,10 @@ export default function LoginScreen({ theme }) {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         setProfileImage(result.assets[0]);
-        console.log('✅ Profile image selected');
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 
@@ -141,7 +148,6 @@ export default function LoginScreen({ theme }) {
       const hasPermission = await permissionService.ensurePermission('camera', true);
       
       if (!hasPermission) {
-        console.log('⚠️ Camera permission not granted');
         return;
       }
 
@@ -153,11 +159,10 @@ export default function LoginScreen({ theme }) {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         setProfileImage(result.assets[0]);
-        console.log('✅ Profile photo taken');
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -174,59 +179,62 @@ export default function LoginScreen({ theme }) {
   };
 
   const handleSubmit = async () => {
-    // Final validation
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-    const isConfirmValid = isSignup ? validateConfirmPassword(confirmPassword) : true;
-
+    // Clear previous main error
+    setMainError('');
+    
+    // Basic validation
     if (!email.trim()) {
-      Alert.alert('Missing Email', 'Please enter your email address');
-      return;
-    }
-
-    if (!isEmailValid) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      setMainError('Please enter your email address');
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('Missing Password', 'Please enter your password');
+      setMainError('Please enter your password');
       return;
     }
 
-    if (!isPasswordValid) {
-      Alert.alert('Weak Password', 'Password must be at least 8 characters and contain uppercase, lowercase, and number');
-      return;
-    }
+    // Signup-specific validation
+    if (isSignup) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setMainError('Please enter a valid email address');
+        return;
+      }
 
-    if (isSignup && password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match');
-      return;
+      if (password.length < 8) {
+        setMainError('Password must be at least 8 characters long');
+        return;
+      }
+
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+        setMainError('Password must contain uppercase, lowercase, and number');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setMainError('Passwords do not match');
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
-      console.log(isSignup ? 'Attempting signup...' : 'Attempting login...');
-      
       const result = isSignup 
         ? await signup(email.trim(), password, profileImage)
         : await login(email.trim(), password);
 
       if (!result.success) {
         const errorMessage = getErrorMessage(result.error);
-        console.error('Auth error:', result.error);
-        Alert.alert(
-          isSignup ? 'Signup Failed' : 'Login Failed',
-          errorMessage
-        );
-      } else {
-        console.log('✅ Authentication successful!');
+        setMainError(errorMessage);
       }
     } catch (error) {
       console.error('Unexpected auth error:', error);
-      const errorMessage = getErrorMessage(error);
-      Alert.alert('Error', errorMessage);
+      setMainError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -237,27 +245,27 @@ export default function LoginScreen({ theme }) {
     
     switch (errorCode) {
       case 'auth/invalid-email':
-        return 'Invalid email address format';
+        return 'Invalid email address';
       case 'auth/user-disabled':
         return 'This account has been disabled';
       case 'auth/user-not-found':
-        return 'No account found with this email. Please sign up.';
+        return 'No account found with this email';
       case 'auth/wrong-password':
-        return 'Incorrect password. Please try again.';
+        return 'Incorrect password';
       case 'auth/invalid-credential':
-        return 'Invalid email or password. Please check your credentials.';
+        return 'Invalid email or password';
       case 'auth/email-already-in-use':
-        return 'This email is already registered. Please login instead.';
+        return 'This email is already registered';
       case 'auth/weak-password':
-        return 'Password is too weak. Use at least 8 characters with uppercase, lowercase, and numbers.';
+        return 'Password is too weak';
       case 'auth/operation-not-allowed':
         return 'Email/password login is not enabled';
       case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
+        return 'Too many attempts. Try again later';
       case 'auth/network-request-failed':
-        return 'Network error. Check your internet connection.';
+        return 'Network error. Check your connection';
       default:
-        return error?.message || 'Authentication failed. Please try again.';
+        return error?.message || 'Authentication failed';
     }
   };
 
@@ -269,6 +277,14 @@ export default function LoginScreen({ theme }) {
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
+    setMainError(''); // Clear main error
+  };
+
+  const getUserInitials = () => {
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
@@ -291,6 +307,14 @@ export default function LoginScreen({ theme }) {
               {isSignup ? 'Create your account' : 'Welcome back'}
             </Text>
           </View>
+
+          {/* MAIN ERROR MESSAGE - Prominent Display */}
+          {mainError ? (
+            <View style={styles.mainErrorContainer}>
+              <Text style={styles.mainErrorIcon}>⚠️</Text>
+              <Text style={styles.mainErrorText}>{mainError}</Text>
+            </View>
+          ) : null}
 
           {/* Profile Image (Signup only) */}
           {isSignup && (
@@ -335,6 +359,7 @@ export default function LoginScreen({ theme }) {
                 onChangeText={(text) => {
                   setEmail(text);
                   validateEmail(text);
+                  setMainError(''); // Clear main error on input
                 }}
                 placeholder="your@email.com"
                 placeholderTextColor={theme.textMuted}
@@ -343,7 +368,7 @@ export default function LoginScreen({ theme }) {
                 autoComplete="email"
                 autoCorrect={false}
               />
-              {emailError ? (
+              {emailError && isSignup ? (
                 <Text style={styles.errorText}>{emailError}</Text>
               ) : null}
             </View>
@@ -358,7 +383,7 @@ export default function LoginScreen({ theme }) {
                     styles.passwordInput,
                     { 
                       color: theme.text, 
-                      borderColor: passwordError ? '#DC2626' : theme.border,
+                      borderColor: passwordError && isSignup ? '#DC2626' : theme.border,
                       backgroundColor: theme.card 
                     }
                   ]}
@@ -366,7 +391,8 @@ export default function LoginScreen({ theme }) {
                   onChangeText={(text) => {
                     setPassword(text);
                     if (isSignup) validatePassword(text);
-                    if (confirmPassword) validateConfirmPassword(confirmPassword);
+                    if (confirmPassword && isSignup) validateConfirmPassword(confirmPassword);
+                    setMainError(''); // Clear main error on input
                   }}
                   placeholder="••••••••"
                   placeholderTextColor={theme.textMuted}
@@ -419,10 +445,6 @@ export default function LoginScreen({ theme }) {
                   )}
                 </View>
               )}
-              
-              {passwordError ? (
-                <Text style={styles.errorText}>{passwordError}</Text>
-              ) : null}
             </View>
 
             {/* Confirm Password (Signup only) */}
@@ -444,6 +466,7 @@ export default function LoginScreen({ theme }) {
                     onChangeText={(text) => {
                       setConfirmPassword(text);
                       validateConfirmPassword(text);
+                      setMainError(''); // Clear main error on input
                     }}
                     placeholder="••••••••"
                     placeholderTextColor={theme.textMuted}
@@ -524,7 +547,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   icon: {
     fontSize: 64,
@@ -538,6 +561,27 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  // MAIN ERROR CONTAINER - Prominent
+  mainErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  mainErrorIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  mainErrorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '600',
   },
   profileImageSection: {
     alignItems: 'center',
