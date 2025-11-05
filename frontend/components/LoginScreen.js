@@ -1,4 +1,4 @@
-// frontend/components/LoginScreen.js - PRODUCTION-READY ERROR HANDLING
+// frontend/components/LoginScreen.js - FIXED IMAGE UPLOAD
 import React, { useState } from 'react';
 import {
   View,
@@ -59,7 +59,7 @@ export default function LoginScreen({ theme }) {
 
   // Real-time email validation - ONLY in signup mode
   const validateEmail = (email) => {
-    if (!isSignup) return; // Skip validation in login mode
+    if (!isSignup) return;
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
@@ -76,7 +76,7 @@ export default function LoginScreen({ theme }) {
 
   // Real-time password validation - ONLY in signup mode
   const validatePassword = (pass) => {
-    if (!isSignup) return; // Skip validation in login mode
+    if (!isSignup) return;
     
     if (!pass) {
       setPasswordError('');
@@ -103,7 +103,7 @@ export default function LoginScreen({ theme }) {
 
   // Confirm password validation - ONLY in signup mode
   const validateConfirmPassword = (confirm) => {
-    if (!isSignup) return; // Skip validation in login mode
+    if (!isSignup) return;
     
     if (!confirm) {
       setConfirmPasswordError('');
@@ -117,15 +117,24 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-  // Pick profile image
-  const pickProfileImage = async () => {
+  // FIXED: Pick profile image from gallery
+  const pickFromGallery = async () => {
+    console.log('📷 pickFromGallery called');
+    
     try {
+      // Check permission first
+      console.log('Checking photo library permission...');
       const hasPermission = await permissionService.ensurePermission('photos', true);
       
       if (!hasPermission) {
+        console.log('❌ Permission denied');
+        Alert.alert('Permission Required', 'Please allow photo library access in settings');
         return;
       }
+      
+      console.log('✅ Permission granted, launching image picker...');
 
+      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -133,49 +142,109 @@ export default function LoginScreen({ theme }) {
         quality: 0.5,
       });
 
+      console.log('Image picker result:', result);
+
       if (!result.canceled && result.assets && result.assets[0]) {
-        setProfileImage(result.assets[0]);
+        const selectedImage = result.assets[0];
+        console.log('✅ Image selected:', {
+          uri: selectedImage.uri,
+          width: selectedImage.width,
+          height: selectedImage.height,
+          type: selectedImage.type
+        });
+        
+        setProfileImage(selectedImage);
+        Alert.alert('Success', 'Profile photo selected!');
+      } else {
+        console.log('Image picker cancelled');
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      console.error('❌ Error picking image:', error);
+      Alert.alert('Error', `Failed to select image: ${error.message}`);
     }
   };
 
-  // Take profile photo
+  // FIXED: Take profile photo with camera
   const takeProfilePhoto = async () => {
+    console.log('📸 takeProfilePhoto called');
+    
     try {
+      // Check permission first
+      console.log('Checking camera permission...');
       const hasPermission = await permissionService.ensurePermission('camera', true);
       
       if (!hasPermission) {
+        console.log('❌ Permission denied');
+        Alert.alert('Permission Required', 'Please allow camera access in settings');
         return;
       }
+      
+      console.log('✅ Permission granted, launching camera...');
 
+      // Launch camera
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
       });
 
+      console.log('Camera result:', result);
+
       if (!result.canceled && result.assets && result.assets[0]) {
-        setProfileImage(result.assets[0]);
+        const selectedImage = result.assets[0];
+        console.log('✅ Photo taken:', {
+          uri: selectedImage.uri,
+          width: selectedImage.width,
+          height: selectedImage.height
+        });
+        
+        setProfileImage(selectedImage);
+        Alert.alert('Success', 'Photo captured!');
+      } else {
+        console.log('Camera cancelled');
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      console.error('❌ Error taking photo:', error);
+      Alert.alert('Error', `Failed to take photo: ${error.message}`);
     }
   };
 
+  // FIXED: Show image picker options
   const showImagePicker = () => {
+    console.log('🖼️ showImagePicker called');
+    
     Alert.alert(
       'Profile Photo',
       'Choose an option',
       [
-        { text: 'Take Photo', onPress: takeProfilePhoto },
-        { text: 'Choose from Gallery', onPress: pickProfileImage },
-        { text: 'Cancel', style: 'cancel' }
+        { 
+          text: 'Take Photo', 
+          onPress: () => {
+            console.log('User selected: Take Photo');
+            takeProfilePhoto();
+          }
+        },
+        { 
+          text: 'Choose from Gallery', 
+          onPress: () => {
+            console.log('User selected: Choose from Gallery');
+            pickFromGallery();
+          }
+        },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('User cancelled')
+        }
       ]
     );
+  };
+
+  // FIXED: Remove profile image
+  const removeProfileImage = () => {
+    console.log('🗑️ Removing profile image');
+    setProfileImage(null);
+    Alert.alert('Success', 'Profile photo removed');
   };
 
   const handleSubmit = async () => {
@@ -224,16 +293,24 @@ export default function LoginScreen({ theme }) {
     setLoading(true);
 
     try {
+      console.log('🔐 Attempting authentication...');
+      console.log('Mode:', isSignup ? 'Signup' : 'Login');
+      console.log('Has profile image:', !!profileImage);
+      
       const result = isSignup 
         ? await signup(email.trim(), password, profileImage)
         : await login(email.trim(), password);
 
+      console.log('Auth result:', result);
+
       if (!result.success) {
         const errorMessage = getErrorMessage(result.error);
         setMainError(errorMessage);
+      } else {
+        console.log('✅ Authentication successful!');
       }
     } catch (error) {
-      console.error('Unexpected auth error:', error);
+      console.error('❌ Unexpected auth error:', error);
       setMainError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -277,7 +354,7 @@ export default function LoginScreen({ theme }) {
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
-    setMainError(''); // Clear main error
+    setMainError('');
   };
 
   const getUserInitials = () => {
@@ -308,7 +385,7 @@ export default function LoginScreen({ theme }) {
             </Text>
           </View>
 
-          {/* MAIN ERROR MESSAGE - Prominent Display */}
+          {/* MAIN ERROR MESSAGE */}
           {mainError ? (
             <View style={styles.mainErrorContainer}>
               <Text style={styles.mainErrorIcon}>⚠️</Text>
@@ -316,28 +393,48 @@ export default function LoginScreen({ theme }) {
             </View>
           ) : null}
 
-          {/* Profile Image (Signup only) */}
+          {/* FIXED: Profile Image Section (Signup only) */}
           {isSignup && (
             <View style={styles.profileImageSection}>
+              <Text style={[styles.profileImageLabel, { color: theme.text }]}>
+                Profile Photo (Optional)
+              </Text>
+              
               <TouchableOpacity 
                 style={styles.profileImageContainer}
                 onPress={showImagePicker}
+                activeOpacity={0.7}
               >
                 {profileImage ? (
-                  <Image 
-                    source={{ uri: profileImage.uri }} 
-                    style={styles.profileImage}
-                  />
+                  <View style={styles.imageWrapper}>
+                    <Image 
+                      source={{ uri: profileImage.uri }} 
+                      style={styles.profileImage}
+                    />
+                    <TouchableOpacity 
+                      style={styles.removeImageButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        removeProfileImage();
+                      }}
+                    >
+                      <Text style={styles.removeImageText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Text style={styles.profileImageIcon}>📷</Text>
                     <Text style={styles.profileImageText}>Add Photo</Text>
+                    <Text style={styles.profileImageHint}>Tap to select</Text>
                   </View>
                 )}
               </TouchableOpacity>
-              <Text style={[styles.profileImageHint, { color: theme.textMuted }]}>
-                Optional - Tap to add profile photo
-              </Text>
+              
+              {!profileImage && (
+                <Text style={[styles.profileImageDesc, { color: theme.textMuted }]}>
+                  Choose a profile photo from your gallery or take a new one
+                </Text>
+              )}
             </View>
           )}
 
@@ -359,7 +456,7 @@ export default function LoginScreen({ theme }) {
                 onChangeText={(text) => {
                   setEmail(text);
                   validateEmail(text);
-                  setMainError(''); // Clear main error on input
+                  setMainError('');
                 }}
                 placeholder="your@email.com"
                 placeholderTextColor={theme.textMuted}
@@ -392,7 +489,7 @@ export default function LoginScreen({ theme }) {
                     setPassword(text);
                     if (isSignup) validatePassword(text);
                     if (confirmPassword && isSignup) validateConfirmPassword(confirmPassword);
-                    setMainError(''); // Clear main error on input
+                    setMainError('');
                   }}
                   placeholder="••••••••"
                   placeholderTextColor={theme.textMuted}
@@ -466,7 +563,7 @@ export default function LoginScreen({ theme }) {
                     onChangeText={(text) => {
                       setConfirmPassword(text);
                       validateConfirmPassword(text);
-                      setMainError(''); // Clear main error on input
+                      setMainError('');
                     }}
                     placeholder="••••••••"
                     placeholderTextColor={theme.textMuted}
@@ -562,7 +659,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-  // MAIN ERROR CONTAINER - Prominent
   mainErrorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -587,16 +683,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  profileImageLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
   profileImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     overflow: 'hidden',
     marginBottom: 8,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
   },
   profileImage: {
     width: '100%',
     height: '100%',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   profileImagePlaceholder: {
     width: '100%',
@@ -604,17 +726,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    borderStyle: 'dashed',
   },
   profileImageIcon: {
-    fontSize: 32,
+    fontSize: 40,
     marginBottom: 4,
   },
   profileImageText: {
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
     color: '#6B7280',
   },
   profileImageHint: {
     fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  profileImageDesc: {
+    fontSize: 12,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   form: {
     marginBottom: 24,

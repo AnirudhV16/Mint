@@ -1,4 +1,4 @@
-// frontend/contexts/AuthContext.js - WITH PROFILE PHOTO SUPPORT
+// frontend/contexts/AuthContext.js - FIXED IMAGE UPLOAD
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -8,7 +8,8 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '../services/firebase';
 import { Platform } from 'react-native';
 
 const AuthContext = createContext({});
@@ -56,6 +57,43 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  /**
+   * Upload profile image to Firebase Storage
+   */
+  const uploadProfileImage = async (imageUri, userId) => {
+    try {
+      console.log('📤 Uploading profile image...');
+      
+      let blob;
+      
+      if (Platform.OS === 'web') {
+        // Web: Convert data URL to blob
+        const response = await fetch(imageUri);
+        blob = await response.blob();
+      } else {
+        // Mobile: Fetch the image and convert to blob
+        const response = await fetch(imageUri);
+        blob = await response.blob();
+      }
+
+      // Create reference to storage location
+      const storageRef = ref(storage, `profile_images/${userId}_${Date.now()}.jpg`);
+      
+      // Upload the blob
+      console.log('⬆️ Uploading to Firebase Storage...');
+      await uploadBytes(storageRef, blob);
+      
+      // Get download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log('✅ Upload complete. URL:', downloadURL);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('❌ Error uploading image:', error);
+      throw error;
+    }
+  };
+
   const signup = async (email, password, profileImage = null) => {
     try {
       console.log('📝 Creating account for:', email);
@@ -66,25 +104,14 @@ export const AuthProvider = ({ children }) => {
       
       console.log('✅ Account created:', user.email);
 
-      // Convert profile image to base64 if provided
-      let profileImageData = null;
+      // Upload profile image if provided
+      let profileImageURL = null;
       if (profileImage && profileImage.uri) {
         try {
-          if (Platform.OS === 'web') {
-            const response = await fetch(profileImage.uri);
-            const blob = await response.blob();
-            const reader = new FileReader();
-            profileImageData = await new Promise((resolve) => {
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          } else {
-            // For mobile, we'll store the URI directly (in production, upload to Firebase Storage)
-            profileImageData = profileImage.uri;
-          }
-          console.log('✅ Profile image processed');
+          profileImageURL = await uploadProfileImage(profileImage.uri, user.uid);
         } catch (imgError) {
-          console.error('⚠️ Failed to process profile image:', imgError);
+          console.error('⚠️ Failed to upload profile image:', imgError);
+          // Continue without image - don't fail signup
         }
       }
 
@@ -92,8 +119,8 @@ export const AuthProvider = ({ children }) => {
       const userProfileData = {
         email: email,
         createdAt: new Date().toISOString(),
-        profileImage: profileImageData,
-        displayName: email.split('@')[0], // Use email username as display name
+        profileImage: profileImageURL, // Store Firebase Storage URL
+        displayName: email.split('@')[0],
       };
 
       await setDoc(doc(db, 'users', user.uid), userProfileData);
@@ -101,7 +128,8 @@ export const AuthProvider = ({ children }) => {
 
       // Update Firebase Auth profile
       await updateProfile(user, {
-        displayName: email.split('@')[0]
+        displayName: email.split('@')[0],
+        photoURL: profileImageURL // Also store in Auth
       });
 
       setUserProfile(userProfileData);
@@ -154,17 +182,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUserProfile = async (updates) => {
+  const updateUserProfile = async (updates, newProfileImage = null) => {
     if (!user) return { success: false, error: 'No user logged in' };
 
     try {
       console.log('📝 Updating user profile...');
       
+      let profileImageURL = userProfile?.profileImage;
+      
+      // Upload new profile image if provided
+      if (newProfileImage && newProfileImage.uri) {
+        try {
+          profileImageURL = await uploadProfileImage(newProfileImage.uri, user.uid);
+          updates.profileImage = profileImageURL;
+        } catch (imgError) {
+          console.error('⚠️ Failed to upload new profile image:', imgError);
+        }
+      }
+
       await setDoc(doc(db, 'users', user.uid), {
         ...userProfile,
         ...updates,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+
+      // Update Auth profile if display name changed
+      if (updates.displayName) {
+        await updateProfile(user, {
+          displayName: updates.displayName,
+          photoURL: profileImageURL
+        });
+      }
 
       setUserProfile({ ...userProfile, ...updates });
       console.log('✅ Profile updated');
