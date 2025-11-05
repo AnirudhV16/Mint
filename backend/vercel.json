@@ -14,5 +14,11 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/notification/check-now",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }

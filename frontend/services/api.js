@@ -13,8 +13,8 @@ import { Platform } from 'react-native';
 // - Mac/Linux: Open Terminal, run: ifconfig
 // - Look for IPv4 address (e.g., 192.168.1.100)
 // ========================================
-
-const API_BASE_URL = 'http://localhost:3001/api';
+// 'http://localhost:3001/api';
+const API_BASE_URL = 'https://food-snowy-six.vercel.app/api';
 
 // For mobile testing, uncomment and update this:
 // const API_BASE_URL = 'http://192.168.1.XXX:3001/api';

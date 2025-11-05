@@ -1,15 +1,21 @@
-// backend/services/notificationService.js
+// backend/services/notificationService.js - FIXED FOR VERCEL
 const admin = require('firebase-admin');
-const { db } = require('../server'); // CORRECT - imports from server.js
 
 class NotificationService {
   constructor() {
     this.isInitialized = admin.apps.length > 0;
   }
 
+  // Get db dynamically to avoid circular dependency (FIX #1)
+  getDb() {
+    if (!admin.apps.length) {
+      throw new Error('Firebase not initialized');
+    }
+    return admin.firestore();
+  }
+
   /**
-   * Schedule notification checks
-   * Run this periodically (e.g., every 6 hours)
+   * Daily notification check - triggered by Vercel Cron
    */
   async checkAndSendExpiryNotifications() {
     if (!this.isInitialized) {
@@ -20,8 +26,12 @@ class NotificationService {
     try {
       console.log('🔔 Checking for expiry notifications...');
       
+      const db = this.getDb();
+      
       // Get all users
       const usersSnapshot = await db.collection('users').get();
+      
+      console.log(`Found ${usersSnapshot.docs.length} user(s) to check`);
       
       for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
@@ -44,12 +54,15 @@ class NotificationService {
           ...doc.data()
         }));
 
+        console.log(`  User ${userId}: ${products.length} product(s)`);
+
         await this.processUserNotifications(userId, fcmToken, products);
       }
 
       console.log('✅ Notification check complete');
     } catch (error) {
       console.error('❌ Error in notification check:', error);
+      throw error; // Throw so Vercel cron can log the error
     }
   }
 
@@ -60,12 +73,14 @@ class NotificationService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const db = this.getDb();
+
     // Get user's last notification timestamps
     const userDoc = await db.collection('users').doc(userId).get();
     const lastWeeklyCheck = userDoc.data()?.lastWeeklyCheck || null;
     const notificationHistory = userDoc.data()?.notificationHistory || {};
 
-    // Send weekly reminder (every 7 days, regardless of expiring items)
+    // Send weekly reminder (every 7 days)
     const shouldSendWeekly = this.shouldSendWeeklyNotification(lastWeeklyCheck);
 
     if (shouldSendWeekly) {
@@ -86,6 +101,7 @@ class NotificationService {
         if (!notificationHistory[notificationKey]) {
           await this.send10DayWarning(fcmToken, product);
           notificationHistory[notificationKey] = new Date().toISOString();
+          console.log(`  ⏰ Sent 10-day warning for: ${product.name}`);
         }
       }
 
@@ -98,6 +114,7 @@ class NotificationService {
         if (!lastSent || !this.isSameDay(new Date(lastSent), today)) {
           await this.sendDailyExpiryWarning(fcmToken, product, daysUntilExpiry);
           notificationHistory[notificationKey] = new Date().toISOString();
+          console.log(`  🚨 Sent ${daysUntilExpiry}-day warning for: ${product.name}`);
         }
       }
     }
@@ -110,7 +127,6 @@ class NotificationService {
 
   /**
    * Send weekly reminder notification
-   * Simple reminder to check food items - sent every 7 days
    */
   async sendWeeklySummary(fcmToken, products) {
     const message = {
