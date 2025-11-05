@@ -1,4 +1,3 @@
-// frontend/components/ItemCard.js - TEST VERSION (NO ALERT)
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
@@ -24,32 +23,26 @@ export default function ItemCard({ product, theme, onEdit, onDelete }) {
   const expiryStatus = getExpiryStatus(daysLeft);
 
   const handleDelete = () => {
-    console.log('🗑️ Delete clicked - DIRECT CALL (NO ALERT)');
-    console.log('Product:', product.id, product.name);
-    console.log('onDelete exists?', !!onDelete);
-    console.log('onDelete type:', typeof onDelete);
     
     if (!onDelete) {
-      console.error('❌ onDelete is null/undefined');
+      console.error(' onDelete is null/undefined');
       return;
     }
     
-    // DIRECT CALL - NO CONFIRMATION
-    console.log('Calling onDelete() directly...');
+    // DIRECT CALL
     try {
       onDelete();
-      console.log('✅ onDelete() called successfully');
+      console.log(' onDelete() called successfully');
     } catch (error) {
-      console.error('❌ Error calling onDelete:', error);
+      console.error(' Error calling onDelete:', error);
     }
   };
 
   const handleEdit = () => {
-    console.log('✏️ Edit clicked');
     console.log('Product:', product.id, product.name);
     
     if (!onEdit) {
-      console.error('❌ onEdit is null/undefined');
+      console.error(' onEdit is null/undefined');
       return;
     }
     
@@ -58,7 +51,7 @@ export default function ItemCard({ product, theme, onEdit, onDelete }) {
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card }]}>
-      {/* Product Info */}
+      
       <View style={styles.content}>
         <Text style={[styles.productName, { color: theme.text }]} numberOfLines={2}>
           {product.name}
@@ -88,7 +81,7 @@ export default function ItemCard({ product, theme, onEdit, onDelete }) {
           onPress={handleDelete}
           activeOpacity={0.7}
         >
-          <Text style={[styles.actionText, { color: '#DC2626' }]}>Delete (TEST)</Text>
+          <Text style={[styles.actionText, { color: '#DC2626' }]}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>

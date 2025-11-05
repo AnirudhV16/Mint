@@ -1,4 +1,3 @@
-// frontend/components/ItemScreen.js - FULLY FIXED
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
@@ -22,7 +21,7 @@ export default function ItemScreen({ theme, darkMode }) {
       return;
     }
 
-    console.log('📦 Loading products for user:', user.uid);
+    console.log(' Loading products for user:', user.uid);
 
     const q = query(
       collection(db, 'products'),
@@ -39,12 +38,12 @@ export default function ItemScreen({ theme, darkMode }) {
         
         productList.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
         
-        console.log('✅ Loaded', productList.length, 'products');
+        console.log(' Loaded', productList.length, 'products');
         setProducts(productList);
         setLoading(false);
       },
       (error) => {
-        console.error('❌ Load error:', error.code, error.message);
+        console.error(' Load error:', error.code, error.message);
         Alert.alert('Error', 'Failed to load products');
         setLoading(false);
       }
@@ -61,7 +60,7 @@ export default function ItemScreen({ theme, darkMode }) {
 
     try {
       if (editingProduct) {
-        console.log('💾 Updating:', editingProduct.id);
+        console.log(' Updating:', editingProduct.id);
         
         await updateDoc(doc(db, 'products', editingProduct.id), {
           ...productData,
@@ -69,7 +68,7 @@ export default function ItemScreen({ theme, darkMode }) {
           updatedAt: new Date().toISOString(),
         });
         
-        console.log('✅ Updated successfully');
+        console.log(' Updated successfully');
         Alert.alert('Success', 'Product updated!');
       } else {
         console.log('➕ Adding new product');
@@ -81,14 +80,14 @@ export default function ItemScreen({ theme, darkMode }) {
           updatedAt: new Date().toISOString(),
         });
         
-        console.log('✅ Added successfully');
+        console.log(' Added successfully');
         Alert.alert('Success', 'Product added!');
       }
       
       setEditingProduct(null);
       setModalVisible(false);
     } catch (error) {
-      console.error('❌ Save error:', error.code, error.message);
+      console.error(' Save error:', error.code, error.message);
       Alert.alert('Error', `Failed to save: ${error.message}`);
       throw error;
     }
@@ -100,16 +99,16 @@ export default function ItemScreen({ theme, darkMode }) {
       return;
     }
 
-    console.log('🗑️ Starting delete process for:', productId);
+    console.log(' Starting delete process for:', productId);
 
     try {
       console.log('Calling deleteDoc...');
       await deleteDoc(doc(db, 'products', productId));
       
-      console.log('✅ Product deleted successfully from Firestore');
+      console.log(' Product deleted successfully from Firestore');
       // Alert moved to ItemCard
     } catch (error) {
-      console.error('❌ Delete error:', error);
+      console.error(' Delete error:', error);
       console.error('Error code:', error.code);
       console.error('Error message:', error.message);
       Alert.alert('Delete Failed', `Could not delete product: ${error.message}`);
@@ -117,13 +116,13 @@ export default function ItemScreen({ theme, darkMode }) {
   };
 
   const handleAddProduct = () => {
-    console.log('➕ Add product clicked');
+    console.log(' Add product clicked');
     setEditingProduct(null);
     setModalVisible(true);
   };
 
   const handleEditProduct = (product) => {
-    console.log('✏️ Edit product clicked:', product.id);
+    console.log(' Edit product clicked:', product.id);
     setEditingProduct(product);
     setModalVisible(true);
   };

@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "AI Food Tracker",
-    "slug": "ai-food-tracker",
+    "name": "Mint",
+    "slug": "mint-food-tracker",
     "owner": "aavv4",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#3B82F6"
+      "backgroundColor": "#FFFFFF"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.aifoodtracker",
+      "bundleIdentifier": "com.mint.foodtracker",
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs camera access to take photos of food product labels for ingredient analysis.",
@@ -28,10 +28,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive_icon.png",
-        "backgroundColor": "#3B82F6"
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.yourcompany.aifoodtracker",
+      "package": "com.mint.foodtracker",
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
@@ -49,7 +49,7 @@
       "useNextNotificationsApi": true
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/logo.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -63,19 +63,14 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification_icon.png",
-          "color": "#3B82F6",
-          "sounds": [
-            "./assets/notification_sound.wav"
-          ],
+          "color": "#22C55E",
           "androidMode": "default",
-          "androidCollapsedTitle": "Food Tracker"
+          "androidCollapsedTitle": "Mint"
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/notification_icon.png",
-      "color": "#3B82F6",
+      "color": "#22C55E",
       "androidMode": "default",
       "androidCollapsedTitle": "{{unread_count}} new notifications",
       "vapidPublicKey": "BG-0crfYgaukKHIAoMWIcCuo3QzfHiURzFpd_SE2WsGasw-XHZtMvTYMXBDdylLs3TzgnNYnuRRlRodVy2OPFjg"

@@ -1,17 +1,17 @@
-// backend/routes/analyze.js - Updated to use environment variables
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const vision = require('@google-cloud/vision');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Configure multer with better options
+
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB
   },
   fileFilter: (req, file, cb) => {
+
     // Accept images only
     if (!file.mimetype.startsWith('image/')) {
       cb(new Error('Only image files are allowed!'), false);
@@ -21,22 +21,21 @@ const upload = multer({
   }
 });
 
-// Initialize Google Vision client using environment variables
+// Initialize Google Vision client
 let visionClient;
 try {
-  // Validate required environment variables
+  
   if (!process.env.GOOGLE_CLOUD_PROJECT_ID || 
       !process.env.GOOGLE_CLOUD_PRIVATE_KEY || 
       !process.env.GOOGLE_CLOUD_CLIENT_EMAIL) {
     throw new Error('Missing required Google Cloud environment variables');
   }
 
-  // Create credentials object from environment variables
   const credentials = {
     type: "service_account",
     project_id: process.env.GOOGLE_CLOUD_PROJECT_ID,
     private_key_id: process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID,
-    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'), // Handle newlines
+    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
     client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
     client_id: process.env.GOOGLE_CLOUD_CLIENT_ID,
     auth_uri: process.env.GOOGLE_CLOUD_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
@@ -50,10 +49,10 @@ try {
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
   });
   
-  console.log('✅ Google Vision API client initialized from environment variables');
+  console.log(' Google Vision API client initialized from environment variables');
   console.log('   Project ID:', process.env.GOOGLE_CLOUD_PROJECT_ID);
 } catch (error) {
-  console.error('❌ Failed to initialize Vision API:', error.message);
+  console.error(' Failed to initialize Vision API:', error.message);
   console.error('   Make sure all GOOGLE_CLOUD_* environment variables are set in .env');
 }
 
@@ -69,7 +68,7 @@ router.post('/', upload.array('images', 4), async (req, res) => {
   try {
     // 1. Validate Vision client
     if (!visionClient) {
-      console.error('❌ Vision API client not initialized');
+      console.error(' Vision API client not initialized');
       return res.status(500).json({
         error: 'Vision API not configured',
         message: 'Google Cloud Vision API is not properly configured. Check environment variables and server logs.'
@@ -106,9 +105,8 @@ router.post('/', upload.array('images', 4), async (req, res) => {
       console.log(`\n[Image ${i + 1}/${req.files.length}]`);
 
       try {
-        // Validate buffer
         if (!file.buffer || file.buffer.length === 0) {
-          console.error(`  ❌ Empty buffer for file ${i + 1}`);
+          console.error(`  Empty buffer for file ${i + 1}`);
           imageAnalysis.push({
             imageIndex: i,
             textFound: false,
@@ -117,20 +115,19 @@ router.post('/', upload.array('images', 4), async (req, res) => {
           continue;
         }
 
-        console.log(`  🔍 Calling Vision API...`);
         
-        // Call Vision API with proper options
+        // Call Vision API
         const [result] = await visionClient.textDetection({
           image: { 
             content: file.buffer.toString('base64') 
           }
         });
 
-        console.log(`  ✓ Vision API response received`);
+        console.log(`  Vision API response received`);
 
         // Check for API errors
         if (result.error) {
-          console.error(`  ❌ Vision API error:`, result.error.message);
+          console.error(` Vision API error:`, result.error.message);
           imageAnalysis.push({
             imageIndex: i,
             textFound: false,
@@ -140,13 +137,13 @@ router.post('/', upload.array('images', 4), async (req, res) => {
         }
 
         const detections = result.textAnnotations;
-        console.log(`  📊 Text annotations: ${detections?.length || 0}`);
+        console.log(` Text annotations: ${detections?.length || 0}`);
 
         if (detections && detections.length > 0) {
           const text = detections[0].description;
           const wordCount = text.split(/\s+/).length;
           
-          console.log(`  ✅ Text found: ${text.length} chars, ${wordCount} words`);
+          console.log(`  Text found: ${text.length} chars, ${wordCount} words`);
           console.log(`  Preview: "${text.substring(0, 80).replace(/\n/g, ' ')}..."`);
           
           allText.push(text);
@@ -159,7 +156,7 @@ router.post('/', upload.array('images', 4), async (req, res) => {
             preview: text.substring(0, 150).replace(/\n/g, ' ') + '...'
           });
         } else {
-          console.log(`  ⚠️  No text detected`);
+          console.log(`  No text detected`);
           imageAnalysis.push({
             imageIndex: i,
             textFound: false,
@@ -168,7 +165,7 @@ router.post('/', upload.array('images', 4), async (req, res) => {
         }
 
       } catch (ocrError) {
-        console.error(`  ❌ OCR error:`, ocrError.message);
+        console.error(` OCR error:`, ocrError.message);
         imageAnalysis.push({
           imageIndex: i,
           textFound: false,
@@ -178,17 +175,17 @@ router.post('/', upload.array('images', 4), async (req, res) => {
     }
 
     const ocrTime = Date.now() - startTime;
-    console.log(`\n⏱️  OCR completed in ${ocrTime}ms`);
+    console.log(`\n⏱  OCR completed in ${ocrTime}ms`);
 
     // 5. Check if we got any text
     const combinedText = allText.filter(Boolean).join('\n\n');
     const successCount = allText.length;
 
-    console.log(`📊 Results: ${successCount}/${req.files.length} images had readable text`);
-    console.log(`📝 Total text: ${combinedText.length} characters`);
+    console.log(`Results: ${successCount}/${req.files.length} images had readable text`);
+    console.log(`Total text: ${combinedText.length} characters`);
 
     if (!combinedText.trim()) {
-      console.log('❌ No text found in any image');
+      console.log(' No text found in any image');
       
       return res.status(400).json({
         error: 'No text found in images',
@@ -202,17 +199,17 @@ router.post('/', upload.array('images', 4), async (req, res) => {
     }
 
     // 6. Send to Gemini for structured extraction
-    console.log('\n🤖 Extracting structured data with Gemini...');
+    console.log('\n Extracting structured data with Gemini...');
     const aiStartTime = Date.now();
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const prompt = `You are analyzing text extracted from a food product label. Extract structured information.
+    const prompt = `You are analyzing text extracted from an food product label. Extract structured information accurately.
 
 TEXT FROM LABEL:
 ${combinedText}
 
-Extract and return ONLY a valid JSON object with:
+Return ONLY a valid JSON object in this exact structure:
 {
   "productName": "Product name (or null if not found)",
   "mfgDate": "YYYY-MM-DD format (or null)",
@@ -226,13 +223,28 @@ Extract and return ONLY a valid JSON object with:
   }
 }
 
-Rules:
-- Extract the main product name
-- Convert any date format to YYYY-MM-DD
-- List all ingredients found
-- Include key nutritional values
-- Use null for missing data
-- Return ONLY valid JSON, no markdown`;
+### Guidelines for date extraction:
+- Indian labels often show dates like:
+  • DD-MM-YYYY or DD/MM/YYYY  
+  • MM-YYYY or MM/YYYY  
+  • MFG: 05/2024 or EXP: 10/2025  
+  • Best Before: 12 months from MFG
+- Detect any valid manufacturing (MFG/MFD) and expiry (EXP/USE BY) dates.
+- If the year has two digits, infer it as 20XX.
+- Normalize every detected date to ISO format (YYYY-MM-DD).
+  • Example: "15-06-2024" → "2024-06-15"
+  • Example: "05/2024" → "2024-05-01"
+  • Example: "MFD 10/23" → "2023-10-01"
+- If no specific day is mentioned, assume the first day of the month.
+- Use null when the date cannot be determined.
+
+### Additional rules:
+- Identify the product name (brand or main title).
+- List ingredients as an array.
+- Include key nutritional values (calories, protein, carbs, fat).
+- Use null for missing information.
+- Return ONLY valid JSON (no markdown or text outside the JSON).`;
+
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -247,15 +259,15 @@ Rules:
     let productData;
     try {
       productData = JSON.parse(aiText);
-      console.log('✅ Product data extracted:', {
+      console.log(' Product data extracted:', {
         name: productData.productName,
         ingredients: productData.ingredients?.length || 0,
         hasDates: !!(productData.mfgDate || productData.expDate)
       });
     } catch (parseError) {
-      console.error('⚠️  Could not parse AI response, using defaults');
+      console.error('  Could not parse AI response, using defaults');
       productData = {
-        productName: combinedText.split('\n')[0].substring(0, 50), // First line as product name
+        productName: combinedText.split('\n')[0].substring(0, 50),
         mfgDate: null,
         expDate: null,
         ingredients: [],
@@ -264,7 +276,7 @@ Rules:
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`\n✅ Analysis complete in ${totalTime}ms\n`);
+    console.log(`\n Analysis complete in ${totalTime}ms\n`);
 
     res.json({
       success: true,
@@ -285,7 +297,7 @@ Rules:
     });
 
   } catch (error) {
-    console.error('\n❌ CRITICAL ERROR:', error.message);
+    console.error('\n CRITICAL ERROR:', error.message);
     console.error('Stack:', error.stack);
     
     res.status(500).json({ 

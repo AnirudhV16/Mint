@@ -1,4 +1,3 @@
-// frontend/App.js - WITH NOTIFICATION SETUP
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,28 +16,27 @@ function AppContent() {
   
   const { user, loading } = useAuth();
 
-  // Register for notifications when user logs in
+
   useEffect(() => {
     if (user) {
       console.log('📱 User logged in, registering for notifications...');
       
-      // Register for push notifications
+      
       notificationService.registerForPushNotifications(user.uid)
         .then(token => {
           if (token) {
-            console.log('✅ Push notifications registered');
+            console.log(' Push notifications registered');
           } else {
-            console.log('⚠️ Could not register push notifications');
+            console.log(' Could not register push notifications');
           }
         })
         .catch(error => {
-          console.error('❌ Error registering notifications:', error);
+          console.error(' Error registering notifications:', error);
         });
 
       // Set up notification listeners
       notificationService.setupNotificationListeners();
 
-      // Cleanup on unmount or logout
       return () => {
         notificationService.removeNotificationListeners();
       };

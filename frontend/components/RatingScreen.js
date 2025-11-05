@@ -1,4 +1,3 @@
-// frontend/components/RatingScreen.js - FILTERED & PROFESSIONAL
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -26,7 +25,7 @@ export default function RatingScreen({ theme, darkMode }) {
       return;
     }
 
-    console.log('📊 Loading rated products for user:', user.uid);
+    console.log(' Loading rated products for user:', user.uid);
 
     const q = query(
       collection(db, 'products'),
@@ -41,17 +40,16 @@ export default function RatingScreen({ theme, darkMode }) {
           ...doc.data()
         }));
         
-        // Filter: Only products with ingredients AND rating
         const ratedProducts = allProducts.filter(product => 
           product.ingredients && 
           product.ingredients.length > 0 &&
           product.rating
         );
         
-        // Sort by rating (highest first)
+        // Sort by rating
         ratedProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         
-        console.log(`✅ Found ${ratedProducts.length} rated products out of ${allProducts.length} total`);
+        console.log(` Found ${ratedProducts.length} rated products out of ${allProducts.length} total`);
         setProducts(ratedProducts);
         setLoading(false);
       },
@@ -110,7 +108,7 @@ export default function RatingScreen({ theme, darkMode }) {
           </View>
         </View>
 
-        {/* Health Summary */}
+      
         {product.healthSummary && (
           <View style={[styles.summaryBox, { 
             backgroundColor: darkMode ? '#1F2937' : '#F9FAFB',
@@ -171,7 +169,6 @@ export default function RatingScreen({ theme, darkMode }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.text }]}>Health Ratings</Text>
           <Text style={[styles.subtitle, { color: theme.textMuted }]}>
@@ -179,7 +176,6 @@ export default function RatingScreen({ theme, darkMode }) {
           </Text>
         </View>
 
-        {/* Content */}
         {loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#3B82F6" />

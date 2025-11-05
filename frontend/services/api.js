@@ -1,33 +1,10 @@
-// frontend/services/api.js
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-// ========================================
-// CONFIGURATION
-// ========================================
-// For WEB: Use localhost
-// For MOBILE: Use your computer's IP address
-// 
-// To find your IP:
-// - Windows: Open CMD, run: ipconfig
-// - Mac/Linux: Open Terminal, run: ifconfig
-// - Look for IPv4 address (e.g., 192.168.1.100)
-// ========================================
-// 'http://localhost:3001/api';
+// backend
 const API_BASE_URL = 'https://food-snowy-six.vercel.app/api';
 
-// For mobile testing, uncomment and update this:
-// const API_BASE_URL = 'http://192.168.1.XXX:3001/api';
 
-// ========================================
-// API FUNCTIONS
-// ========================================
-
-/**
- * Analyze product images using Google Vision AI
- * @param {Array} imageFiles - Array of File objects (web) or image objects with uri, type, name (mobile)
- * @returns {Promise} Response with extracted product data
- */
 export const analyzeImages = async (imageFiles) => {
   try {
     console.log('analyzeImages called with', imageFiles.length, 'files');
@@ -36,13 +13,13 @@ export const analyzeImages = async (imageFiles) => {
     const formData = new FormData();
 
     if (Platform.OS === 'web') {
-      // Web: imageFiles are already File objects from the blob conversion
+      
       imageFiles.forEach((file, index) => {
         console.log(`Appending file ${index}:`, file.name, file.type, file.size);
         formData.append('images', file);
       });
     } else {
-      // Mobile: Use URI with proper structure
+      
       imageFiles.forEach((file, index) => {
         console.log(`Appending mobile file ${index}:`, file.uri);
         formData.append('images', {
@@ -59,7 +36,7 @@ export const analyzeImages = async (imageFiles) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 60000, // 60 second timeout for image processing
+      timeout: 60000,
     });
 
     console.log('Analysis response received:', response.data);
@@ -74,12 +51,6 @@ export const analyzeImages = async (imageFiles) => {
   }
 };
 
-/**
- * Generate recipe suggestions from ingredients
- * @param {Array} ingredients - Array of ingredient names
- * @param {Array} customIngredients - Optional custom ingredient names
- * @returns {Promise} Response with recipe suggestions
- */
 export const generateRecipes = async (ingredients, customIngredients = []) => {
   try {
     console.log('Generating recipes with ingredients:', ingredients);
@@ -101,12 +72,8 @@ export const generateRecipes = async (ingredients, customIngredients = []) => {
   }
 };
 
-/**
- * Get detailed recipe instructions
- * @param {string} recipeName - Name of the recipe
- * @param {Array} ingredients - Array of ingredient names
- * @returns {Promise} Response with detailed recipe
- */
+
+
 export const getRecipeDetails = async (recipeName, ingredients) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/recipe/details`, {
@@ -123,12 +90,7 @@ export const getRecipeDetails = async (recipeName, ingredients) => {
   }
 };
 
-/**
- * Get health rating analysis for product
- * @param {Array} ingredients - Array of ingredient names
- * @param {string} productName - Name of the product
- * @returns {Promise} Response with health rating analysis
- */
+
 export const rateProduct = async (ingredients, productName = '') => {
   try {
     console.log('Rating product:', productName, 'with', ingredients.length, 'ingredients');
@@ -150,17 +112,13 @@ export const rateProduct = async (ingredients, productName = '') => {
   }
 };
 
-/**
- * Batch analyze multiple products
- * @param {Array} products - Array of product objects with ingredients
- * @returns {Promise} Response with batch analysis results
- */
+
 export const batchRateProducts = async (products) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/rating/batch`, {
       products
     }, {
-      timeout: 60000, // Longer timeout for batch processing
+      timeout: 60000, 
     });
 
     return response.data;
@@ -170,10 +128,7 @@ export const batchRateProducts = async (products) => {
   }
 };
 
-/**
- * Check backend server health
- * @returns {Promise} Response with server status
- */
+
 export const checkBackendHealth = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL.replace('/api', '')}/health`, {
@@ -187,5 +142,4 @@ export const checkBackendHealth = async () => {
   }
 };
 
-// Export base URL for debugging
 export const getBaseURL = () => API_BASE_URL;

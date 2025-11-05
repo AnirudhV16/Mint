@@ -1,4 +1,3 @@
-// backend/routes/rating.js
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -6,12 +5,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// POST /api/rating/analyze - Analyze product health rating
+// Analyze product health rating
 router.post('/analyze', async (req, res) => {
   try {
     const { ingredients, productName } = req.body;
 
-    // Validate input
     if (!ingredients || ingredients.length === 0) {
       return res.status(400).json({ 
         error: 'No ingredients provided',
@@ -22,7 +20,7 @@ router.post('/analyze', async (req, res) => {
     const ingredientList = ingredients.join(', ');
     const product = productName || 'Food product';
     
-    console.log('⭐ Analyzing health rating for:', product);
+    console.log(' Analyzing health rating for:', product);
     console.log('   Ingredients:', ingredientList);
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
@@ -61,20 +59,17 @@ Return ONLY valid JSON with this exact structure:
     const response = await result.response;
     let text = response.text();
     
-    // Clean up response
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
     let analysis;
     try {
       analysis = JSON.parse(text);
       
-      // Validate and normalize rating
       if (typeof analysis.rating !== 'number') {
         analysis.rating = 3;
       }
       analysis.rating = Math.max(1, Math.min(5, Math.round(analysis.rating)));
       
-      // Ensure arrays exist
       if (!Array.isArray(analysis.goodContents)) {
         analysis.goodContents = [];
       }
@@ -82,7 +77,6 @@ Return ONLY valid JSON with this exact structure:
         analysis.badContents = [];
       }
       
-      // Add default summary if missing
       if (!analysis.summary) {
         analysis.summary = `This product received a ${analysis.rating} star rating.`;
       }
@@ -90,7 +84,6 @@ Return ONLY valid JSON with this exact structure:
     } catch (parseError) {
       console.error('Failed to parse Gemini response:', text);
       
-      // Fallback analysis
       analysis = {
         rating: 3,
         goodContents: [
@@ -105,7 +98,7 @@ Return ONLY valid JSON with this exact structure:
       };
     }
 
-    console.log(`✅ Health rating: ${analysis.rating} stars`);
+    console.log(` Health rating: ${analysis.rating} stars`);
 
     res.json({
       success: true,
@@ -115,7 +108,7 @@ Return ONLY valid JSON with this exact structure:
     });
 
   } catch (error) {
-    console.error('❌ Rating analysis error:', error);
+    console.error(' Rating analysis error:', error);
     res.status(500).json({ 
       error: 'Failed to analyze ingredients', 
       details: error.message 
@@ -123,7 +116,7 @@ Return ONLY valid JSON with this exact structure:
   }
 });
 
-// POST /api/rating/batch - Analyze multiple products at once
+//Analyze multiple products at once
 router.post('/batch', async (req, res) => {
   try {
     const { products } = req.body;
@@ -134,7 +127,7 @@ router.post('/batch', async (req, res) => {
       });
     }
 
-    console.log(`⭐ Batch analyzing ${products.length} product(s)...`);
+    console.log(` Batch analyzing ${products.length} product(s)...`);
 
     const results = [];
 
@@ -152,7 +145,6 @@ router.post('/batch', async (req, res) => {
           continue;
         }
 
-        // Call the analysis for each product
         const ingredientList = ingredients.join(', ');
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
         
@@ -184,7 +176,7 @@ Return JSON: {"rating": number, "goodContents": array, "badContents": array, "su
       }
     }
 
-    console.log(`✅ Batch analysis complete: ${results.filter(r => r.success).length}/${products.length} succeeded`);
+    console.log(` Batch analysis complete: ${results.filter(r => r.success).length}/${products.length} succeeded`);
 
     res.json({
       success: true,
@@ -197,7 +189,7 @@ Return JSON: {"rating": number, "goodContents": array, "badContents": array, "su
     });
 
   } catch (error) {
-    console.error('❌ Batch rating error:', error);
+    console.error(' Batch rating error:', error);
     res.status(500).json({ 
       error: 'Failed to analyze products', 
       details: error.message 

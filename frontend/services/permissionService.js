@@ -1,4 +1,3 @@
-// frontend/services/permissionService.js
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { Alert, Linking, Platform } from 'react-native';
@@ -12,11 +11,9 @@ class PermissionService {
     };
   }
 
-  /**
-   * Request all permissions on app startup
-   */
+
   async requestAllPermissions() {
-    console.log('🔐 Requesting all permissions...');
+    console.log(' Requesting all permissions...');
     
     const results = {
       camera: await this.requestCameraPermission(false),
@@ -26,19 +23,19 @@ class PermissionService {
 
     this.permissions = results;
     
-    console.log('✅ Permissions check complete:', results);
+    console.log(' Permissions check complete:', results);
     return results;
   }
 
-  /**
-   * Request Camera Permission
-   */
+
+  // Request Camera Permission
+
   async requestCameraPermission(showAlert = true) {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status === 'granted') {
-        console.log('✅ Camera permission granted');
+        console.log(' Camera permission granted');
         return true;
       } else if (status === 'denied' && showAlert) {
         this.showPermissionDeniedAlert('Camera', 
@@ -48,20 +45,20 @@ class PermissionService {
       
       return false;
     } catch (error) {
-      console.error('❌ Error requesting camera permission:', error);
+      console.error(' Error requesting camera permission:', error);
       return false;
     }
   }
 
-  /**
-   * Request Photo Library Permission
-   */
+
+  //Request Photo Library Permission
+
   async requestPhotoLibraryPermission(showAlert = true) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status === 'granted') {
-        console.log('✅ Photo library permission granted');
+        console.log(' Photo library permission granted');
         return true;
       } else if (status === 'denied' && showAlert) {
         this.showPermissionDeniedAlert('Photos', 
@@ -71,14 +68,14 @@ class PermissionService {
       
       return false;
     } catch (error) {
-      console.error('❌ Error requesting photo library permission:', error);
+      console.error(' Error requesting photo library permission:', error);
       return false;
     }
   }
 
-  /**
-   * Request Notification Permission
-   */
+
+  // Request Notification Permission
+
   async requestNotificationPermission(showAlert = true) {
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -90,7 +87,7 @@ class PermissionService {
       }
 
       if (finalStatus === 'granted') {
-        console.log('✅ Notification permission granted');
+        console.log(' Notification permission granted');
         return true;
       } else if (finalStatus === 'denied' && showAlert) {
         this.showPermissionDeniedAlert('Notifications', 
@@ -100,14 +97,14 @@ class PermissionService {
       
       return false;
     } catch (error) {
-      console.error('❌ Error requesting notification permission:', error);
+      console.error(' Error requesting notification permission:', error);
       return false;
     }
   }
 
-  /**
-   * Check if permission is granted
-   */
+
+  // Check if permission is granted
+
   async checkPermission(permissionType) {
     try {
       switch (permissionType) {
@@ -127,14 +124,14 @@ class PermissionService {
           return false;
       }
     } catch (error) {
-      console.error(`❌ Error checking ${permissionType} permission:`, error);
+      console.error(` Error checking ${permissionType} permission:`, error);
       return false;
     }
   }
 
-  /**
-   * Get all permission statuses
-   */
+
+  // Get all permission statuses
+
   async getAllPermissionStatuses() {
     const statuses = {
       camera: await this.checkPermission('camera'),
@@ -146,9 +143,7 @@ class PermissionService {
     return statuses;
   }
 
-  /**
-   * Show alert when permission is denied
-   */
+
   showPermissionDeniedAlert(permissionName, message) {
     Alert.alert(
       `${permissionName} Access Required`,
@@ -166,9 +161,7 @@ class PermissionService {
     );
   }
 
-  /**
-   * Open device settings
-   */
+
   openSettings() {
     if (Platform.OS === 'ios') {
       Linking.openURL('app-settings:');
@@ -177,9 +170,7 @@ class PermissionService {
     }
   }
 
-  /**
-   * Show comprehensive permission explanation
-   */
+
   showPermissionExplanation() {
     Alert.alert(
       '📱 App Permissions',
@@ -197,9 +188,6 @@ class PermissionService {
     );
   }
 
-  /**
-   * Request permission with explanation
-   */
   async requestPermissionWithExplanation(permissionType) {
     const explanations = {
       camera: {
@@ -251,9 +239,7 @@ class PermissionService {
     });
   }
 
-  /**
-   * Check and request permission if needed
-   */
+
   async ensurePermission(permissionType, showExplanation = true) {
     const hasPermission = await this.checkPermission(permissionType);
     

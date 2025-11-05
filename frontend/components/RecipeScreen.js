@@ -1,4 +1,3 @@
-// frontend/components/RecipeScreen.js - FINAL FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -32,12 +31,12 @@ export default function RecipeScreen({ theme, darkMode }) {
   // Load products from Firestore
   useEffect(() => {
     if (!user) {
-      console.log('📝 No user logged in');
+      console.log(' No user logged in');
       setLoadingProducts(false);
       return;
     }
 
-    console.log('📦 Loading products for user:', user.uid);
+    console.log(' Loading products for user:', user.uid);
     setLoadingProducts(true);
 
     const q = query(
@@ -52,12 +51,12 @@ export default function RecipeScreen({ theme, darkMode }) {
           id: doc.id,
           ...doc.data()
         }));
-        console.log('✅ Loaded', productList.length, 'products');
+        console.log(' Loaded', productList.length, 'products');
         setProducts(productList);
         setLoadingProducts(false);
       },
       (error) => {
-        console.error('❌ Error loading products:', error);
+        console.error(' Error loading products:', error);
         setLoadingProducts(false);
       }
     );
@@ -65,18 +64,18 @@ export default function RecipeScreen({ theme, darkMode }) {
     return () => unsubscribe();
   }, [user]);
 
-  // Load recipe history - WITHOUT orderBy to avoid index requirement
+  // Load recipe history
   useEffect(() => {
     if (!user) {
-      console.log('📝 No user logged in');
+      console.log(' No user logged in');
       setLoadingHistory(false);
       return;
     }
 
-    console.log('📜 Loading recipe history for user:', user.uid);
+    console.log(' Loading recipe history for user:', user.uid);
     setLoadingHistory(true);
 
-    // Simple query without orderBy - no index needed!
+    // Simple query
     const q = query(
       collection(db, 'recipeHistory'),
       where('userId', '==', user.uid)
@@ -90,20 +89,19 @@ export default function RecipeScreen({ theme, darkMode }) {
             id: doc.id,
             ...doc.data()
           }))
-          // Sort in JavaScript instead
           .sort((a, b) => {
             const dateA = new Date(a.createdAt || 0);
             const dateB = new Date(b.createdAt || 0);
             return dateB - dateA;
           })
-          .slice(0, 10); // Keep only latest 10
+          .slice(0, 10);
         
-        console.log('✅ Loaded', history.length, 'recipe history items');
+        console.log(' Loaded', history.length, 'recipe history items');
         setRecipeHistory(history);
         setLoadingHistory(false);
       },
       (error) => {
-        console.error('❌ Error loading recipe history:', error);
+        console.error(' Error loading recipe history:', error);
         setLoadingHistory(false);
       }
     );
@@ -137,18 +135,18 @@ export default function RecipeScreen({ theme, darkMode }) {
         .map(i => i.trim())
         .filter(Boolean);
 
-      console.log('🍳 Generating recipes with:', ingredientNames, customIngredients);
+      console.log(' Generating recipes with:', ingredientNames, customIngredients);
 
       const response = await generateRecipes(ingredientNames, customIngredients);
       
       if (response.success && response.recipes) {
         setGeneratedRecipes(response.recipes);
-        console.log('✅ Generated', response.recipes.length, 'recipes');
+        console.log(' Generated', response.recipes.length, 'recipes');
       } else {
         Alert.alert('Error', 'Failed to generate recipes');
       }
     } catch (error) {
-      console.error('❌ Recipe generation error:', error);
+      console.error(' Recipe generation error:', error);
       Alert.alert('Error', 'Failed to generate recipes. Please try again.');
     } finally {
       setLoading(false);
@@ -163,7 +161,7 @@ export default function RecipeScreen({ theme, darkMode }) {
         return product?.name;
       }).filter(Boolean);
 
-      console.log('📖 Getting details for recipe:', recipe.name);
+      console.log(' Getting details for recipe:', recipe.name);
 
       const response = await getRecipeDetails(recipe.name, ingredientNames);
       
@@ -188,16 +186,16 @@ export default function RecipeScreen({ theme, darkMode }) {
             };
             
             await addDoc(collection(db, 'recipeHistory'), historyData);
-            console.log('✅ Saved COMPLETE recipe to history');
+            console.log(' Saved COMPLETE recipe to history');
           } catch (historyError) {
-            console.error('❌ Failed to save recipe history:', historyError);
+            console.error(' Failed to save recipe history:', historyError);
           }
         }
       } else {
         Alert.alert('Error', 'Failed to get recipe details');
       }
     } catch (error) {
-      console.error('❌ Recipe details error:', error);
+      console.error(' Recipe details error:', error);
       Alert.alert('Error', 'Failed to get recipe details');
     } finally {
       setLoading(false);
@@ -205,7 +203,7 @@ export default function RecipeScreen({ theme, darkMode }) {
   };
 
   const handleViewHistoryRecipe = (historyItem) => {
-    console.log('📖 Viewing recipe from history:', historyItem.name);
+    console.log(' Viewing recipe from history:', historyItem.name);
     
     // Set the selected recipe from history data
     setSelectedRecipe({
@@ -479,6 +477,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+    paddingTop: 80,
   },
   title: {
     fontSize: 28,

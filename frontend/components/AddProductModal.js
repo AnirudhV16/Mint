@@ -1,4 +1,3 @@
-// frontend/components/AddProductModal.js - PRODUCTION ERROR HANDLING
 import React, { useState } from 'react';
 import {
   View,
@@ -27,7 +26,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
   const [selectedImages, setSelectedImages] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzedData, setAnalyzedData] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(''); // Main error display
+  const [errorMessage, setErrorMessage] = useState('');
 
   React.useEffect(() => {
     if (visible) {
@@ -49,20 +48,20 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
         setAnalyzedData(null);
       }
       setSelectedImages([]);
-      setErrorMessage(''); // Clear error on open
+      setErrorMessage('');
     }
   }, [visible, editProduct]);
 
   const pickFromGallery = async () => {
     try {
-      setErrorMessage(''); // Clear previous errors
-      
+      setErrorMessage('');
+
       const remainingSlots = 4 - selectedImages.length;
       
-      // CHECK LIMIT BEFORE OPENING PICKER
+  
       if (remainingSlots <= 0) {
         setErrorMessage('Image limit reached. Maximum 4 images allowed.');
-        return; // STOP HERE - Don't open picker
+        return;
       }
 
       // Check permission
@@ -83,13 +82,13 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       if (!result.canceled && result.assets) {
         const newImages = result.assets.slice(0, remainingSlots);
         
-        // Check if trying to add more than allowed
+        
         if (result.assets.length > remainingSlots) {
           setErrorMessage(`Only ${remainingSlots} more image(s) allowed. ${newImages.length} added.`);
         }
         
         setSelectedImages([...selectedImages, ...newImages]);
-        console.log(`✅ Added ${newImages.length} image(s) from gallery`);
+        console.log(` Added ${newImages.length} image(s) from gallery`);
       }
     } catch (error) {
       console.error('Gallery error:', error);
@@ -99,15 +98,13 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
   const takePhoto = async () => {
     try {
-      setErrorMessage(''); // Clear previous errors
+      setErrorMessage('');
       
-      // CHECK LIMIT BEFORE OPENING CAMERA
       if (selectedImages.length >= 4) {
         setErrorMessage('Image limit reached. Maximum 4 images allowed.');
-        return; // STOP HERE - Don't open camera
+        return;
       }
 
-      // Check permission
       const hasPermission = await permissionService.ensurePermission('camera', true);
       
       if (!hasPermission) {
@@ -122,7 +119,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
 
       if (!result.canceled && result.assets && result.assets[0]) {
         setSelectedImages([...selectedImages, result.assets[0]]);
-        console.log('✅ Photo captured');
+        console.log(' Photo captured');
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -133,7 +130,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
   const removeImage = (index) => {
     const newImages = selectedImages.filter((_, i) => i !== index);
     setSelectedImages(newImages);
-    setErrorMessage(''); // Clear error when removing images
+    setErrorMessage('');
   };
 
   const handleAnalyzeImages = async () => {
@@ -143,7 +140,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
     }
 
     setAnalyzing(true);
-    setErrorMessage(''); // Clear previous errors
+    setErrorMessage('');
 
     try {
       let imageFiles;
@@ -191,7 +188,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
             });
             
             Alert.alert(
-              'Success! ✅', 
+              'Successs', 
               `Found ${data.ingredients.length} ingredients\nRating: ${ratingResponse.analysis.rating}/5 ⭐`
             );
           } else {
@@ -251,7 +248,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
   };
 
   const handleSave = async () => {
-    setErrorMessage(''); // Clear previous errors
+    setErrorMessage('');
     
     if (!productName.trim()) {
       setErrorMessage('Please enter product name');
@@ -301,7 +298,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
       statusBarTranslucent
     >
       <View style={[styles.container, { backgroundColor: theme.bg }]}>
-        {/* Fixed Header */}
+        
         <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <Text style={[styles.title, { color: theme.text }]}>
             {editProduct ? 'Edit Product' : 'Add Product'}
@@ -311,13 +308,13 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
           </TouchableOpacity>
         </View>
 
-        {/* Scrollable Content */}
+        
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* ERROR MESSAGE DISPLAY - Prominent */}
+          
           {errorMessage ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorIcon}>⚠️</Text>
@@ -331,7 +328,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
             </View>
           ) : null}
 
-          {/* Image Upload Section */}
+          
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               📸 Product Images ({selectedImages.length}/4)
@@ -506,7 +503,7 @@ export default function AddProductModal({ visible, onClose, onSave, editProduct,
           <View style={{ height: 20 }} />
         </ScrollView>
 
-        {/* Fixed Bottom Button */}
+        
         <View style={[styles.footer, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
           <TouchableOpacity
             style={[
@@ -562,7 +559,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
-  // ERROR CONTAINER - Prominent display
+  
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',

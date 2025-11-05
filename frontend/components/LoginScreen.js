@@ -1,4 +1,3 @@
-// frontend/components/LoginScreen.js - NO PROFILE IMAGE UPLOAD
 import React, { useState } from 'react';
 import {
   View,
@@ -11,8 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function LoginScreen({ theme }) {
   const [email, setEmail] = useState('');
@@ -23,17 +26,16 @@ export default function LoginScreen({ theme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Real-time validation states - ONLY for signup
+  // for signup
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   
-  // Main error message (shown prominently)
   const [mainError, setMainError] = useState('');
   
   const { login, signup } = useAuth();
 
-  // Password strength checker
+  // Password strength
   const checkPasswordStrength = (pass) => {
     const criteria = {
       length: pass.length >= 8,
@@ -53,7 +55,7 @@ export default function LoginScreen({ theme }) {
 
   const passwordStrength = password && isSignup ? checkPasswordStrength(password) : null;
 
-  // Real-time email validation - ONLY in signup mode
+  // email validation
   const validateEmail = (email) => {
     if (!isSignup) return;
     
@@ -70,7 +72,7 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-  // Real-time password validation - ONLY in signup mode
+  // password validation
   const validatePassword = (pass) => {
     if (!isSignup) return;
     
@@ -97,7 +99,7 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-  // Confirm password validation - ONLY in signup mode
+  // Confirm password validation
   const validateConfirmPassword = (confirm) => {
     if (!isSignup) return;
     
@@ -113,13 +115,9 @@ export default function LoginScreen({ theme }) {
     return true;
   };
 
-
-
   const handleSubmit = async () => {
-    // Clear previous main error
     setMainError('');
     
-    // Basic validation
     if (!email.trim()) {
       setMainError('Please enter your email address');
       return;
@@ -130,7 +128,6 @@ export default function LoginScreen({ theme }) {
       return;
     }
 
-    // Signup-specific validation
     if (isSignup) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
@@ -161,7 +158,7 @@ export default function LoginScreen({ theme }) {
     setLoading(true);
 
     try {
-      console.log('🔐 Attempting authentication...');
+      console.log(' Attempting authentication...');
       console.log('Mode:', isSignup ? 'Signup' : 'Login');
       
       const result = isSignup 
@@ -174,10 +171,10 @@ export default function LoginScreen({ theme }) {
         const errorMessage = getErrorMessage(result.error);
         setMainError(errorMessage);
       } else {
-        console.log('✅ Authentication successful!');
+        console.log(' Authentication successful!');
       }
     } catch (error) {
-      console.error('❌ Unexpected auth error:', error);
+      console.error(' Unexpected auth error:', error);
       setMainError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -223,6 +220,22 @@ export default function LoginScreen({ theme }) {
     setMainError('');
   };
 
+  const getLogoSize = () => {
+    if (Platform.OS === 'web') {
+      return {
+        width: Math.min(SCREEN_WIDTH * 0.3, 150),
+        height: Math.min(SCREEN_WIDTH * 0.3, 150),
+      };
+    } else {
+      return {
+        width: Math.min(SCREEN_WIDTH * 0.4, 180),
+        height: Math.min(SCREEN_WIDTH * 0.4, 180),
+      };
+    }
+  };
+
+  const logoSize = getLogoSize();
+
   return (
     <KeyboardAvoidingView 
       style={[styles.container, { backgroundColor: theme.bg }]}
@@ -233,18 +246,17 @@ export default function LoginScreen({ theme }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.icon}>🍽️</Text>
-            <Text style={[styles.title, { color: theme.text }]}>
-              AI Food Tracker
-            </Text>
+            <Image
+              source={require('../assets/logo.png')}
+              style={[styles.logo, logoSize]}
+              resizeMode="contain"
+            />
             <Text style={[styles.subtitle, { color: theme.textMuted }]}>
               {isSignup ? 'Create your account' : 'Welcome back'}
             </Text>
           </View>
 
-          {/* MAIN ERROR MESSAGE */}
           {mainError ? (
             <View style={styles.mainErrorContainer}>
               <Text style={styles.mainErrorIcon}>⚠️</Text>
@@ -335,7 +347,6 @@ export default function LoginScreen({ theme }) {
                     ✓ One number
                   </Text>
                   
-                  {/* Password Strength */}
                   {passwordStrength && password.length > 0 && (
                     <View style={styles.strengthContainer}>
                       <Text style={[styles.strengthLabel, { color: passwordStrength.color }]}>
@@ -358,7 +369,7 @@ export default function LoginScreen({ theme }) {
               )}
             </View>
 
-            {/* Confirm Password (Signup only) */}
+            {/* Confirm Password */}
             {isSignup && (
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: theme.text }]}>Confirm Password</Text>
@@ -458,16 +469,10 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
-  icon: {
-    fontSize: 64,
+  logo: {
     marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,

@@ -1,30 +1,36 @@
-// frontend/services/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// ========================================
-// IMPORTANT: REPLACE THIS WITH YOUR CONFIG
-// ========================================
-// Get your config from:
-// Firebase Console → Project Settings → Your apps → Web app
-// ========================================
-
+// env variables
 const firebaseConfig = {
-  apiKey: "AIzaSyA3U5vokoQJak0NAzhlREMwmWfAomVi-2E",
-  authDomain: "ai-food-tracker-c2599.firebaseapp.com",
-  projectId: "ai-food-tracker-c2599",
-  storageBucket: "ai-food-tracker-c2599.firebasestorage.app",
-  messagingSenderId: "752249028435",
-  appId: "1:752249028435:web:f8b5c0cb95f65b2bc02ba6"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Initialize Firebase Auth with persistence
+let auth;
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
 
-// Export the app instance if needed
+// Initialize Firestore and Storage
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+export { auth, db, storage };
 export default app;

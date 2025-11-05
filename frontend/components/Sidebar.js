@@ -1,4 +1,3 @@
-// frontend/components/Sidebar.js - WITH PROFILE PHOTO DISPLAY
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, TouchableWithoutFeedback, Image } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,10 +32,9 @@ export default function Sidebar({
   }, [isOpen]);
 
   const handleLogout = async () => {
-    console.log('🚪 Logout clicked');
     
     if (!logout) {
-      console.error('❌ logout is null/undefined');
+      console.error(' logout is null/undefined');
       return;
     }
     
@@ -45,7 +43,7 @@ export default function Sidebar({
       console.log('Logout result:', result);
       
       if (result && result.success) {
-        console.log('✅ Logout successful!');
+        console.log(' Logout successful!');
         
         if (Platform.OS === 'web') {
           setTimeout(() => {
@@ -53,10 +51,10 @@ export default function Sidebar({
           }, 100);
         }
       } else {
-        console.error('❌ Logout returned failure:', result?.error);
+        console.error(' Logout returned failure:', result?.error);
       }
     } catch (error) {
-      console.error('❌ Exception during logout:', error);
+      console.error(' Exception during logout:', error);
     }
   };
 
@@ -81,7 +79,6 @@ export default function Sidebar({
   };
 
   if (!isOpen) {
-    // Only show toggle button when closed
     return (
       <TouchableOpacity
         style={[styles.toggleButton, { backgroundColor: theme.card }]}
@@ -98,7 +95,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Backdrop - Click to close */}
       <TouchableWithoutFeedback onPress={onToggle}>
         <Animated.View
           style={[
@@ -111,7 +107,6 @@ export default function Sidebar({
         />
       </TouchableWithoutFeedback>
 
-      {/* Sidebar */}
       <Animated.View
         style={[
           styles.sidebar,
@@ -122,7 +117,6 @@ export default function Sidebar({
           }
         ]}
       >
-        {/* Close Button */}
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onToggle}
@@ -203,7 +197,6 @@ export default function Sidebar({
           </TouchableOpacity>
         </View>
 
-        {/* Bottom Section */}
         <View style={[styles.bottomSection, { borderTopColor: theme.border }]}>
           <TouchableOpacity
             style={styles.themeButton}

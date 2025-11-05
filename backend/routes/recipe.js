@@ -1,4 +1,3 @@
-// backend/routes/recipe.js - OPTIMIZED FOR SPEED
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -6,7 +5,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// POST /api/recipe/generate - Generate recipe suggestions
+// Generate recipe suggestions
 router.post('/generate', async (req, res) => {
   try {
     const { ingredients, customIngredients } = req.body;
@@ -24,7 +23,7 @@ router.post('/generate', async (req, res) => {
     }
 
     const ingredientList = allIngredients.join(', ');
-    console.log('🍳 Generating recipes for:', ingredientList);
+    console.log(' Generating recipes for:', ingredientList);
 
     // FASTEST: gemini-2.0-flash-exp (best speed/quality balance)
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
@@ -98,7 +97,7 @@ Return ONLY a valid JSON array with this exact structure:
       ];
     }
 
-    console.log(`✅ Generated ${recipes.length} recipe(s)`);
+    console.log(` Generated ${recipes.length} recipe(s)`);
 
     res.json({
       success: true,
@@ -107,7 +106,7 @@ Return ONLY a valid JSON array with this exact structure:
     });
 
   } catch (error) {
-    console.error('❌ Recipe generation error:', error);
+    console.error(' Recipe generation error:', error);
     res.status(500).json({ 
       error: 'Failed to generate recipes', 
       details: error.message 
@@ -115,7 +114,7 @@ Return ONLY a valid JSON array with this exact structure:
   }
 });
 
-// POST /api/recipe/details - Get detailed recipe instructions
+// Get detailed recipe instructions
 router.post('/details', async (req, res) => {
   try {
     const { recipeName, ingredients } = req.body;
@@ -127,7 +126,7 @@ router.post('/details', async (req, res) => {
     }
 
     const ingredientList = ingredients ? ingredients.join(', ') : 'available ingredients';
-    console.log('📖 Getting recipe details for:', recipeName);
+    console.log(' Getting recipe details for:', recipeName);
 
     // FASTEST: gemini-2.0-flash-exp (2-3x faster than gemini-2.5-pro)
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
@@ -193,7 +192,7 @@ Return ONLY valid JSON with this exact structure:
       };
     }
 
-    console.log('✅ Recipe details generated');
+    console.log(' Recipe details generated');
 
     res.json({
       success: true,
@@ -204,7 +203,7 @@ Return ONLY valid JSON with this exact structure:
     });
 
   } catch (error) {
-    console.error('❌ Recipe details error:', error);
+    console.error(' Recipe details error:', error);
     res.status(500).json({ 
       error: 'Failed to get recipe details', 
       details: error.message 
