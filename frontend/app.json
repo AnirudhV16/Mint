@@ -2,6 +2,7 @@
   "expo": {
     "name": "AI Food Tracker",
     "slug": "ai-food-tracker",
+    "owner": "aavv4",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,22 +28,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive_icon.png",
         "backgroundColor": "#3B82F6"
       },
       "package": "com.yourcompany.aifoodtracker",
       "versionCode": 1,
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES",
-        "NOTIFICATIONS",
-        "POST_NOTIFICATIONS",
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.NOTIFICATIONS",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
       ],
       "useNextNotificationsApi": true
     },
@@ -61,27 +63,27 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/notification_icon.png",
           "color": "#3B82F6",
           "sounds": [
-            "./assets/notification-sound.wav"
+            "./assets/notification_sound.wav"
           ],
           "androidMode": "default",
           "androidCollapsedTitle": "Food Tracker"
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id-here"
-      }
-    },
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/notification_icon.png",
       "color": "#3B82F6",
       "androidMode": "default",
       "androidCollapsedTitle": "{{unread_count}} new notifications",
       "vapidPublicKey": "BG-0crfYgaukKHIAoMWIcCuo3QzfHiURzFpd_SE2WsGasw-XHZtMvTYMXBDdylLs3TzgnNYnuRRlRodVy2OPFjg"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e5c479f9-c946-4587-a430-3a862c393621"
+      }
     }
   }
 }
