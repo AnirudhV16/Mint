@@ -1,4 +1,4 @@
-// frontend/components/LoginScreen.js
+// frontend/components/LoginScreen.js - ENHANCED WITH DETAILED VALIDATION
 import React, { useState } from 'react';
 import {
   View,
@@ -10,54 +10,182 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../contexts/AuthContext';
+import permissionService from '../services/permissionService';
 
 export default function LoginScreen({ theme }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Real-time validation states
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   
   const { login, signup } = useAuth();
 
-  // Helper function to get user-friendly error messages
-  const getErrorMessage = (error) => {
-    console.log('Firebase error:', error);
+  // Password strength checker
+  const checkPasswordStrength = (pass) => {
+    const criteria = {
+      length: pass.length >= 8,
+      uppercase: /[A-Z]/.test(pass),
+      lowercase: /[a-z]/.test(pass),
+      number: /[0-9]/.test(pass),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(pass),
+    };
+
+    const strength = Object.values(criteria).filter(Boolean).length;
     
-    // Extract error code from Firebase error
-    const errorCode = error?.code || error?.message || '';
+    if (strength <= 2) return { label: 'Weak', color: '#DC2626', score: strength };
+    if (strength <= 3) return { label: 'Fair', color: '#EA580C', score: strength };
+    if (strength <= 4) return { label: 'Good', color: '#CA8A04', score: strength };
+    return { label: 'Strong', color: '#22C55E', score: strength };
+  };
+
+  const passwordStrength = password ? checkPasswordStrength(password) : null;
+
+  // Real-time email validation
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setEmailError('');
+      return true;
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError('Invalid email format');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
+
+  // Real-time password validation
+  const validatePassword = (pass) => {
+    if (!pass) {
+      setPasswordError('');
+      return true;
+    }
     
-    switch (errorCode) {
-      case 'auth/invalid-email':
-        return 'Invalid email address format';
-      case 'auth/user-disabled':
-        return 'This account has been disabled';
-      case 'auth/user-not-found':
-        return 'No account found with this email';
-      case 'auth/wrong-password':
-        return 'Incorrect password';
-      case 'auth/invalid-credential':
-        return 'Invalid email or password';
-      case 'auth/email-already-in-use':
-        return 'This email is already registered';
-      case 'auth/weak-password':
-        return 'Password should be at least 6 characters';
-      case 'auth/operation-not-allowed':
-        return 'Email/password login is not enabled';
-      case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later';
-      case 'auth/network-request-failed':
-        return 'Network error. Check your internet connection';
-      default:
-        return error?.message || 'Authentication failed';
+    if (pass.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return false;
+    }
+    
+    const hasUpperCase = /[A-Z]/.test(pass);
+    const hasLowerCase = /[a-z]/.test(pass);
+    const hasNumber = /[0-9]/.test(pass);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      setPasswordError('Password must contain uppercase, lowercase, and number');
+      return false;
+    }
+    
+    setPasswordError('');
+    return true;
+  };
+
+  // Confirm password validation
+  const validateConfirmPassword = (confirm) => {
+    if (!confirm && isSignup) {
+      setConfirmPasswordError('');
+      return true;
+    }
+    if (confirm !== password) {
+      setConfirmPasswordError('Passwords do not match');
+      return false;
+    }
+    setConfirmPasswordError('');
+    return true;
+  };
+
+  // Pick profile image
+  const pickProfileImage = async () => {
+    try {
+      const hasPermission = await permissionService.ensurePermission('photos', true);
+      
+      if (!hasPermission) {
+        console.log('⚠️ Photo library permission not granted');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setProfileImage(result.assets[0]);
+        console.log('✅ Profile image selected');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
+  // Take profile photo
+  const takeProfilePhoto = async () => {
+    try {
+      const hasPermission = await permissionService.ensurePermission('camera', true);
+      
+      if (!hasPermission) {
+        console.log('⚠️ Camera permission not granted');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setProfileImage(result.assets[0]);
+        console.log('✅ Profile photo taken');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  const showImagePicker = () => {
+    Alert.alert(
+      'Profile Photo',
+      'Choose an option',
+      [
+        { text: 'Take Photo', onPress: takeProfilePhoto },
+        { text: 'Choose from Gallery', onPress: pickProfileImage },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
   const handleSubmit = async () => {
-    // Validate inputs
+    // Final validation
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    const isConfirmValid = isSignup ? validateConfirmPassword(confirmPassword) : true;
+
     if (!email.trim()) {
       Alert.alert('Missing Email', 'Please enter your email address');
+      return;
+    }
+
+    if (!isEmailValid) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
@@ -66,15 +194,13 @@ export default function LoginScreen({ theme }) {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
+    if (!isPasswordValid) {
+      Alert.alert('Weak Password', 'Password must be at least 8 characters and contain uppercase, lowercase, and number');
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+    if (isSignup && password !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match');
       return;
     }
 
@@ -84,11 +210,10 @@ export default function LoginScreen({ theme }) {
       console.log(isSignup ? 'Attempting signup...' : 'Attempting login...');
       
       const result = isSignup 
-        ? await signup(email.trim(), password)
+        ? await signup(email.trim(), password, profileImage)
         : await login(email.trim(), password);
 
       if (!result.success) {
-        // Show user-friendly error message
         const errorMessage = getErrorMessage(result.error);
         console.error('Auth error:', result.error);
         Alert.alert(
@@ -97,7 +222,6 @@ export default function LoginScreen({ theme }) {
         );
       } else {
         console.log('✅ Authentication successful!');
-        // AuthContext will handle navigation automatically
       }
     } catch (error) {
       console.error('Unexpected auth error:', error);
@@ -108,101 +232,277 @@ export default function LoginScreen({ theme }) {
     }
   };
 
+  const getErrorMessage = (error) => {
+    const errorCode = error?.code || error?.message || '';
+    
+    switch (errorCode) {
+      case 'auth/invalid-email':
+        return 'Invalid email address format';
+      case 'auth/user-disabled':
+        return 'This account has been disabled';
+      case 'auth/user-not-found':
+        return 'No account found with this email. Please sign up.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please check your credentials.';
+      case 'auth/email-already-in-use':
+        return 'This email is already registered. Please login instead.';
+      case 'auth/weak-password':
+        return 'Password is too weak. Use at least 8 characters with uppercase, lowercase, and numbers.';
+      case 'auth/operation-not-allowed':
+        return 'Email/password login is not enabled';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later.';
+      case 'auth/network-request-failed':
+        return 'Network error. Check your internet connection.';
+      default:
+        return error?.message || 'Authentication failed. Please try again.';
+    }
+  };
+
+  const toggleMode = () => {
+    setIsSignup(!isSignup);
+    setPassword('');
+    setConfirmPassword('');
+    setProfileImage(null);
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+  };
+
   return (
     <KeyboardAvoidingView 
       style={[styles.container, { backgroundColor: theme.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.icon}>🍽️</Text>
-          <Text style={[styles.title, { color: theme.text }]}>
-            AI Food Tracker
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-            Track food, generate recipes, analyze nutrition
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.text }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { 
-                color: theme.text, 
-                borderColor: theme.border,
-                backgroundColor: theme.card 
-              }]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="your@email.com"
-              placeholderTextColor={theme.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.text }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { 
-                color: theme.text, 
-                borderColor: theme.border,
-                backgroundColor: theme.card 
-              }]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={theme.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-            />
-            <Text style={[styles.helperText, { color: theme.textMuted }]}>
-              At least 6 characters
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.icon}>🍽️</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              AI Food Tracker
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+              {isSignup ? 'Create your account' : 'Welcome back'}
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.7}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {isSignup ? 'Create Account' : 'Log In'}
+          {/* Profile Image (Signup only) */}
+          {isSignup && (
+            <View style={styles.profileImageSection}>
+              <TouchableOpacity 
+                style={styles.profileImageContainer}
+                onPress={showImagePicker}
+              >
+                {profileImage ? (
+                  <Image 
+                    source={{ uri: profileImage.uri }} 
+                    style={styles.profileImage}
+                  />
+                ) : (
+                  <View style={styles.profileImagePlaceholder}>
+                    <Text style={styles.profileImageIcon}>📷</Text>
+                    <Text style={styles.profileImageText}>Add Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <Text style={[styles.profileImageHint, { color: theme.textMuted }]}>
+                Optional - Tap to add profile photo
               </Text>
+            </View>
+          )}
+
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Email Input */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: theme.text }]}>Email</Text>
+              <TextInput
+                style={[
+                  styles.input, 
+                  { 
+                    color: theme.text, 
+                    borderColor: emailError ? '#DC2626' : theme.border,
+                    backgroundColor: theme.card 
+                  }
+                ]}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  validateEmail(text);
+                }}
+                placeholder="your@email.com"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+              />
+              {emailError ? (
+                <Text style={styles.errorText}>{emailError}</Text>
+              ) : null}
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.input, 
+                    styles.passwordInput,
+                    { 
+                      color: theme.text, 
+                      borderColor: passwordError ? '#DC2626' : theme.border,
+                      backgroundColor: theme.card 
+                    }
+                  ]}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (isSignup) validatePassword(text);
+                    if (confirmPassword) validateConfirmPassword(confirmPassword);
+                  }}
+                  placeholder="••••••••"
+                  placeholderTextColor={theme.textMuted}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Text style={styles.eyeIconText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Password Requirements (Signup only) */}
+              {isSignup && (
+                <View style={styles.passwordRequirements}>
+                  <Text style={[styles.requirementText, password.length >= 8 && styles.requirementMet]}>
+                    ✓ At least 8 characters
+                  </Text>
+                  <Text style={[styles.requirementText, /[A-Z]/.test(password) && styles.requirementMet]}>
+                    ✓ One uppercase letter
+                  </Text>
+                  <Text style={[styles.requirementText, /[a-z]/.test(password) && styles.requirementMet]}>
+                    ✓ One lowercase letter
+                  </Text>
+                  <Text style={[styles.requirementText, /[0-9]/.test(password) && styles.requirementMet]}>
+                    ✓ One number
+                  </Text>
+                  
+                  {/* Password Strength */}
+                  {passwordStrength && password.length > 0 && (
+                    <View style={styles.strengthContainer}>
+                      <Text style={[styles.strengthLabel, { color: passwordStrength.color }]}>
+                        Strength: {passwordStrength.label}
+                      </Text>
+                      <View style={styles.strengthBar}>
+                        {[...Array(5)].map((_, i) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.strengthSegment,
+                              i < passwordStrength.score && { backgroundColor: passwordStrength.color }
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {passwordError ? (
+                <Text style={styles.errorText}>{passwordError}</Text>
+              ) : null}
+            </View>
+
+            {/* Confirm Password (Signup only) */}
+            {isSignup && (
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: theme.text }]}>Confirm Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      { 
+                        color: theme.text, 
+                        borderColor: confirmPasswordError ? '#DC2626' : theme.border,
+                        backgroundColor: theme.card 
+                      }
+                    ]}
+                    value={confirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      validateConfirmPassword(text);
+                    }}
+                    placeholder="••••••••"
+                    placeholderTextColor={theme.textMuted}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity 
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Text style={styles.eyeIconText}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {confirmPasswordError ? (
+                  <Text style={styles.errorText}>{confirmPasswordError}</Text>
+                ) : confirmPassword && !confirmPasswordError ? (
+                  <Text style={styles.successText}>✓ Passwords match</Text>
+                ) : null}
+              </View>
             )}
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.toggleButton}
-            onPress={() => {
-              setIsSignup(!isSignup);
-              // Clear password when switching
-              setPassword('');
-            }}
-            disabled={loading}
-          >
-            <Text style={[styles.toggleButtonText, { color: theme.primary }]}>
-              {isSignup 
-                ? 'Already have an account? Log In' 
-                : "Don't have an account? Sign Up"}
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {isSignup ? 'Create Account' : 'Log In'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Toggle Mode */}
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={toggleMode}
+              disabled={loading}
+            >
+              <Text style={[styles.toggleButtonText, { color: theme.primary }]}>
+                {isSignup 
+                  ? 'Already have an account? Log In' 
+                  : "Don't have an account? Sign Up"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={[styles.footerText, { color: theme.textMuted }]}>
+              🔒 Your data is secure and private
             </Text>
-          </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.textMuted }]}>
-            🔒 Your data is secure and private
-          </Text>
-        </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -210,6 +510,9 @@ export default function LoginScreen({ theme }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -221,7 +524,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 32,
   },
   icon: {
     fontSize: 64,
@@ -235,6 +538,39 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  profileImageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  profileImageContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageIcon: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  profileImageText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  profileImageHint: {
+    fontSize: 12,
   },
   form: {
     marginBottom: 24,
@@ -253,8 +589,60 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
-  helperText: {
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 45,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    padding: 4,
+  },
+  eyeIconText: {
+    fontSize: 20,
+  },
+  passwordRequirements: {
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+  requirementText: {
     fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  requirementMet: {
+    color: '#22C55E',
+  },
+  strengthContainer: {
+    marginTop: 8,
+  },
+  strengthLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  strengthBar: {
+    flexDirection: 'row',
+    gap: 4,
+    height: 4,
+  },
+  strengthSegment: {
+    flex: 1,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  successText: {
+    fontSize: 12,
+    color: '#22C55E',
     marginTop: 4,
     marginLeft: 4,
   },
@@ -283,6 +671,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
+    marginTop: 16,
   },
   footerText: {
     fontSize: 14,

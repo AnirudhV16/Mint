@@ -1,6 +1,6 @@
-// frontend/components/Sidebar.js - OVERLAY WITH BACKDROP
+// frontend/components/Sidebar.js - WITH PROFILE PHOTO DISPLAY
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, TouchableWithoutFeedback, Image } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ 
@@ -15,7 +15,7 @@ export default function Sidebar({
 }) {
   const slideAnim = React.useRef(new Animated.Value(-280)).current;
   const backdropAnim = React.useRef(new Animated.Value(0)).current;
-  const { logout } = useAuth();
+  const { logout, userProfile } = useAuth();
 
   React.useEffect(() => {
     Animated.parallel([
@@ -61,10 +61,23 @@ export default function Sidebar({
   };
 
   const getUserInitials = () => {
+    if (userProfile?.displayName) {
+      return userProfile.displayName.substring(0, 2).toUpperCase();
+    }
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
     return 'U';
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.displayName) {
+      return userProfile.displayName;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
   };
 
   if (!isOpen) {
@@ -119,11 +132,23 @@ export default function Sidebar({
 
         {/* Profile */}
         <View style={[styles.profile, { borderBottomColor: theme.border }]}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getUserInitials()}</Text>
+          <View style={styles.avatarContainer}>
+            {userProfile?.profileImage ? (
+              <Image 
+                source={{ uri: userProfile.profileImage }} 
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{getUserInitials()}</Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
-            {user?.email || 'User'}
+            {getUserDisplayName()}
+          </Text>
+          <Text style={[styles.userEmail, { color: theme.textMuted }]} numberOfLines={1}>
+            {user?.email}
           </Text>
         </View>
 
@@ -275,23 +300,38 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     borderBottomWidth: 1,
   },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   userName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    width: '100%',
+    textAlign: 'center',
+  },
+  userEmail: {
+    fontSize: 12,
     width: '100%',
     textAlign: 'center',
   },
