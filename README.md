@@ -8,7 +8,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-10.14-FFCA28?logo=firebase)](https://firebase.google.com/)
 [![Google AI](https://img.shields.io/badge/Google%20AI-Gemini-4285F4?logo=google)](https://ai.google.dev/)
 
-> *"I watched my food expire. So I built an AI to make sure it never happens again."*
+> *"I watched my food expire. So I built an AI powered App to make sure it never happens again."*
 
 ## Screenshots
 Authentication
@@ -450,3 +450,4 @@ Anirudh V
 <p align="center">
   <sub>© 2025 Mint. All rights reserved.</sub>
 </p>
+
