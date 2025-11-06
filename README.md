@@ -103,7 +103,7 @@ This isn't just an app—it's a solution to **reduce food waste, save money, and
 ## Try It Out!
 
 ### 🌐 Web Demo (Live Preview)
-**[Try Web App](https://your-app-url.vercel.app)**
+**[Try Web App](https://mint-web-kohl.vercel.app/)**
 
 ⚠️ **Note:** Web notifications have limited browser support and may not work fully. For the complete experience with push notifications, please use the Android APK.
 
@@ -277,7 +277,7 @@ Firebase Platform
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/ai-food-tracker.git
+git clone https://github.com/AnirudhV16/Mint.git
 cd ai-food-tracker
 
 # 2. Backend setup
@@ -430,7 +430,7 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
 -  **Handwritten labels** - OCR accuracy drops to ~70%
 -  **Offline mode** - Requires internet for AI features
 
-**Report issues:** [GitHub Issues](https://github.com/yourusername/ai-food-tracker/issues)
+**Report issues:** [GitHub Issues](https://github.com/AnirudhV16/Mint/issues)
 
 ---
 
