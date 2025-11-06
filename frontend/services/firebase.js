@@ -5,14 +5,15 @@ import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// env variables
+// SAFE TO EXPOSE - These are PUBLIC identifiers, not secret keys
+// Security is handled by Firestore Security Rules, not by hiding these values
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
+  apiKey: "AIzaSyA3U5vokoQJak0NAzhlREMwmWfAomVi-2E",
+  authDomain: "ai-food-tracker-c2599.firebaseapp.com",
+  projectId: "ai-food-tracker-c2599",
+  storageBucket: "ai-food-tracker-c2599.firebasestorage.app",
+  messagingSenderId: "752249028435",
+  appId: "1:752249028435:web:f8b5c0cb95f65b2bc02ba6"
 };
 
 // Initialize Firebase
