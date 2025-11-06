@@ -93,8 +93,7 @@ This isn't just an app—it's a solution to **reduce food waste, save money, and
 
 <p align="center">
   <video width="600" controls>
-    <source src="assets/app-demo.mp4" type="video/mp4">
-    Your browser does not support the video tag.
+    <source src="https://github.com/user-attachments/assets/6d8d2d6d-ec54-4856-9bf3-e43c8e8538af" type="video/mp4">
   </video>
 </p>
 
@@ -108,7 +107,7 @@ This isn't just an app—it's a solution to **reduce food waste, save money, and
 ⚠️ **Note:** Web notifications have limited browser support and may not work fully. For the complete experience with push notifications, please use the Android APK.
 
 ### 📲 Android APK (Full Features)
-**[Download APK](https://github.com/yourusername/ai-food-tracker/releases/latest/download/app.apk)**
+**[Download APK](https://github.com/AnirudhV16/Mint/releases/download/app.apk)**
 
 Install the APK on your Android device for the full experience including push notifications.
 
@@ -288,7 +287,6 @@ cp .env.example .env
 # 3. Frontend setup
 cd ../frontend
 npm install
-cp .env.example .env
 
 # 4. Start development servers
 # Terminal 1 - Backend
@@ -348,18 +346,22 @@ GOOGLE_CLOUD_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
 GOOGLE_CLOUD_CLIENT_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xxxxx%40your-project.iam.gserviceaccount.com
 ```
 
-**4. Frontend `.env` file:**
-```env
-# Firebase Web Configuration
-EXPO_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
+**4. Frontend Firebase Configuration:**
+
+The frontend uses Firebase configuration directly in the code (no `.env` file needed). Update the Firebase configuration in `frontend/services/firebase.js`:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "your-firebase-api-key",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "your-sender-id",
+  appId: "your-app-id"
+};
 ```
 
-**Note:** The frontend uses environment variables via `process.env.EXPO_PUBLIC_*` which are automatically loaded by Expo. Make sure your `services/firebase.js` references these variables correctly.
+**Note:** Firebase web configuration values (apiKey, authDomain, etc.) are safe to expose publicly as they're designed for client-side use. Firebase security rules protect your data, not these configuration values.
 
 ---
 
@@ -394,8 +396,6 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
 -  **Firebase security rules** enforce user isolation
 -  **Environment variables** for all secrets
 -  **HTTPS only** in production
-
-**Privacy Promise:** Your food data is yours. We don't share, sell, or analyze it for marketing.
 
 ---
 
@@ -450,4 +450,3 @@ Anirudh V
 <p align="center">
   <sub>© 2025 Mint. All rights reserved.</sub>
 </p>
-
