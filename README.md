@@ -107,7 +107,7 @@ This isn't just an app—it's a solution to **reduce food waste, save money, and
 ⚠️ **Note:** Web notifications have limited browser support and may not work fully. For the complete experience with push notifications, please use the Android APK.
 
 ### 📲 Android APK (Full Features)
-**[Download APK](https://github.com/AnirudhV16/Mint/releases/download/app.apk)**
+**[Download APK](https://github.com/AnirudhV16/Mint/raw/main/releases/app.apk)**
 
 Install the APK on your Android device for the full experience including push notifications.
 
@@ -450,3 +450,4 @@ Anirudh V
 <p align="center">
   <sub>© 2025 Mint. All rights reserved.</sub>
 </p>
+
